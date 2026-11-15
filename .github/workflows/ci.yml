@@ -55,10 +55,11 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:latest
     steps:
-      - name: Toolchain and libraries
-        run: |
-          pacman -Syu --noconfirm --needed git ccache clang lld ninja uv python sdl3 opus libvpx zstd xxhash \
-            vulkan-headers vulkan-icd-loader
+      # Built as release.yml builds it, against the Steam Runtime sysroot: main then keeps both caches (the sysroot
+      # and ccache's objects) that a release tag can read (a tag only sees its own caches and main's). Built against
+      # Arch's libraries instead, the v0.1.12 release rebuilt the sysroot (107 s) and every object (88 s).
+      - name: Tools
+        run: pacman -Syu --noconfirm --needed git ccache clang lld llvm ninja make cmake pkgconf expat binutils uv python
       - uses: actions/checkout@v5
       - name: ccache in the checkout, kept between runs (build.py compiles through it when installed)
         run: echo "CCACHE_DIR=$PWD/.ccache" >> "$GITHUB_ENV"
@@ -72,9 +73,15 @@ jobs:
           mkdir -p scratchpad/vma
           curl -sSfL -o scratchpad/vma/vk_mem_alloc.h "$VMA_URL"
           echo "$VMA_SHA256  scratchpad/vma/vk_mem_alloc.h" | sha256sum -c -
+      - uses: actions/cache@v4
+        with:
+          path: build/sysroot
+          key: sysroot-${{ hashFiles('tools/build/sysroot.py') }}
+      - name: Steam Runtime sysroot (glibc 2.31)
+        run: uv run tools/build/sysroot.py
       # The self-tests (--probe-*) need the game set up: the runtime claims the game's address space first.
       - name: Runtime and launcher (no game)
-        run: uv run tools/build/build.py --dist --runtime-only
+        run: uv run tools/build/build.py --dist --runtime-only --sysroot build/sysroot
 
   linux-aarch64:
     runs-on: ubuntu-latest

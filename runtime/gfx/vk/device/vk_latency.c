@@ -9,6 +9,7 @@
 // frame more (half the median read interval, the "press" column), as on the console. The game's own delay between
 // reading the controller and drawing the result (whether it draws this frame's state or the last) is not counted: it
 // is the console's too.
+#include <math.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -173,6 +174,27 @@ static void shown(uint64_t id, uint64_t t) {
     plat_mutex_unlock(&lk);
 }
 
+// Every present's step to the next on the screen, in refreshes, counted per 5 s: 1 is a frame per refresh, 0 a present
+// another replaced before it was shown (mailbox: present wait returns with the next one), 2+ a refresh that showed the
+// same frame again. 60 shown with frame generation is not 60 even ones (fgm1, mailbox: at 20x3 and 15x4 6-18 % of
+// the refreshes replaced or repeated; Adrià 15/11/2026: "a x4 ... se ve como lagueado").
+static void steps_note(uint64_t t) {
+    static uint64_t last, t0;
+    static unsigned n[4];
+    double hz = vk_present_refresh_hz();
+    if (last && hz > 0) {
+        long k = lround((double)(t - last) * hz / 1e9);
+        n[k < 0 ? 0 : k > 3 ? 3 : k]++;
+    }
+    last = t;
+    if (!t0) t0 = t;
+    if (t - t0 < 5000000000ull) return;
+    rt_log("latency: shown steps in refreshes over %.1f s: 0 (replaced) %u, 1 %u, 2 %u, 3+ %u", (t - t0) / 1e9, n[0],
+           n[1], n[2], n[3]);
+    memset(n, 0, sizeof n);
+    t0 = t;
+}
+
 static void waiter_main(void *arg) {
     (void)arg;
     for (;;) {
@@ -186,7 +208,11 @@ static void waiter_main(void *arg) {
             r = sc_now ? wait_fn(dev, sc_now, id, WAIT_SLICE_NS) : VK_ERROR_OUT_OF_DATE_KHR;
             plat_mutex_unlock(&sc_lock);
         }
-        if (r == VK_SUCCESS) shown(id, kern_now_ns());
+        if (r == VK_SUCCESS) {
+            uint64_t t = kern_now_ns();
+            shown(id, t);
+            steps_note(t);
+        }
         plat_mutex_lock(&id_lock);
         id_head++;
         plat_mutex_unlock(&id_lock);
