@@ -16,5 +16,6 @@ end's regression test runs over captures instead (`tools/test/`).
 | `test_mods.py` | Code patches shipped by mods (`recomp/patches.py` `load_mods`): a mod with spans only, two mods on one address stop the generate, no `mods/` folder leaves the table as it was |
 | `test_cfg.py` | Every setting the in-game menu writes to `mkw.ini` is a key `runtime/core/base/cfg.c` reads back (#168: `HDR` was dropped as unknown) |
 | `test_defaults.py` | The memory caps a player gets with nothing set (`runtime/gfx/vk/device/vk_defaults.c`), built alone and checked on the GPUs players reported: the Radeon 660M keeps its measured caps, a large discrete GPU is not held to them (issue #31) |
+| `test_warp32.py` | Executes the translator's actual shuffle/ballot helpers and emitted signed/unsigned reductions as C++ on synthetic 32/64/128-lane subgroups, with distinct values per logical warp and partially active masks |
 
 Usage: `uv run pytest tests`
