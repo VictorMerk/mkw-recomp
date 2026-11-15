@@ -40,6 +40,24 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
 - **The start screen says how the last game ended**: when it stopped with a known problem, it names the issue that
   follows it (no need to report it again) or the release that fixes it; an unknown error gets a button to the bug
   form, asking for `logs/mkw.log`.
+- **20 and 15 fps, at the race's real speed, and Low latency**: Settings > Graphics > Frame rate gains 20 and 15, and
+  Automatic now drops to them (it stopped at 30) when frames take too long, so a slow graphics card no longer plays
+  the race in slow motion: at 15 the time trial's clock runs at 0.998x real time and the karts drive as at 60. With
+  Frame generation at 2x, 15 fps shows as 30. New **Low latency** (on): the game used to prepare up to two frames
+  ahead of the screen; now it starts each one only as early as its work needs, measured frame by frame. On a Radeon
+  660M at 15 fps a controller read reached its frame's display time in about 115 ms instead of 200. 20 and 15 apply
+  only in races: menus and loading screens go at 30 at most, as on the console, and a cup's opening movie plays at
+  60 from its first frame, so it can always be skipped (opened at 30 or 15 fps it was not skipped in 7 of 9 runs).
+  Frame generation pauses while a movie plays: the movie keeps its own rate instead of repeated frames. At 15 fps
+  with 2x the made frame and the game's now go out evenly, 33 ms apart (they went 25 and 42 ms apart), and the full
+  performance overlay shows the game's frames and the screen's ("20/40 fps") instead of only the game's.
+  Frame generation's **Automatic** now makes only as many frames as split the screen's refreshes evenly: on 60 Hz,
+  2x at 30 fps, 3x at 20 and 4x at 15, all 60, where 2x at 20 (40 fps) held frames 1, 2, 1, 2 refreshes and
+  juddered. A 75 Hz screen, where no game rate fits, shows the game's own frames. New **Variable refresh screen**
+  (off): with FreeSync or G-Sync on, Automatic makes as many as fit in time instead. A fixed 2x, 3x or 4x that
+  does not fit the screen shows a note under it.
+- **Scaling to the window is bilinear by default**: AMD FSR 1 is on only when picked in Settings > Graphics or by
+  Auto-set.
 - **Issues**: a report of a known error is closed at once as its duplicate (a reply from its author reopens it), and
   a report on an older release, quiet for 3 days, is asked to try the latest and closed after 7 days without a reply.
 - **Motion controls for every player** (discussion 302): the gyroscope and accelerometer were read from player 1's
@@ -56,6 +74,10 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   (169.254.x.x), and two PCs on the same network never saw each other. The address on the network with the default
   route now comes first, then other local networks, then 169.254.x.x, and VPN /32 addresses last. The log lists the
   candidates (`nifm: LAN candidate`); `lan_ip` in `mkw.ini` still picks one by hand.
+- **LAN play on game version 1.8.0** (#309 by @Elenedeath): 1.8.0's patch table had no `lan` set, so its title menu
+  kept Wireless Play (the console's radio, which a PC does not have) and picking it ended in 2203-0022, the game
+  never asking for a local network. The set is ported, and with LAN play on the menu opens with LAN Play chosen, as on
+  1.0.0.
 - **"Choose game folder" in every menu language**: its four texts came in English only in 0.1.11.
 - **Photo mode no longer crashes on game version 1.8.0** (#305): pressing Minus in free roam at 1440 lines closed the
   game (`main+0xa66e0`): 1.8.0's photo mode, with its stickers, needs render targets the game's buffer pool has no room
@@ -72,6 +94,12 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   midway (8 of 8, against 30 % of the game's fragment shaders). A discarded pixel now stays as a helper to the end of
   the shader (Vulkan's demote, as Switch emulators and DXVK do) instead of ending in the middle of it. Verified on the
   captures (same images) and not on an NVIDIA card.
+- **The GPU hang report comes before amdgpu resets the GPU** (#327 by @andreknieriem): on the Steam Deck the kernel
+  resets a GPU job after 5 s (SteamOS's `amdgpu.lockup_timeout`), as soon as the report of #297 was due, so three hangs
+  ended with no line in `mkw.log`. On amdgpu the report now comes after two fifths of that timeout (2 s on the Deck);
+  an unset or unavailable kernel timeout uses 1 s (the documented default has been as short as 2 s), elsewhere it stays
+  at 5 s, and `MKW_GPU_HANG_MS` sets it. Each stuck episode reports once, not only the first, and one the GPU finishes
+  after all says so ("it was slow, not hung").
 
 ## 0.1.11
 

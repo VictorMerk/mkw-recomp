@@ -17,5 +17,6 @@ end's regression test runs over captures instead (`tools/test/`).
 | `test_cfg.py` | Every setting the in-game menu writes to `mkw.ini` is a key `runtime/core/base/cfg.c` reads back (#168: `HDR` was dropped as unknown) |
 | `test_defaults.py` | The memory caps a player gets with nothing set (`runtime/gfx/vk/device/vk_defaults.c`), built alone and checked on the GPUs players reported: the Radeon 660M keeps its measured caps, a large discrete GPU is not held to them (issue #31) |
 | `test_warp32.py` | Executes the translator's actual shuffle/ballot helpers and emitted signed/unsigned reductions as C++ on synthetic 32/64/128-lane subgroups, with distinct values per logical warp and partially active masks |
+| `test_adpcm.py` | DSP-ADPCM voices (`runtime/audio/audio_mixer.c`, its voice decoding cut out and built alone) against an exact decode of random buffers (`c/t_adpcm.c`): with a context on every buffer, loops included, the output is the exact decode; without contexts at most a few samples differ (a slot refilled before the walk decoded its last samples); high pitch and sample rate cross more than 128 input samples at once; each sample is decoded about once (#331) |
 
 Usage: `uv run pytest tests`
