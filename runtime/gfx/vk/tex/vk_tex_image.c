@@ -298,6 +298,7 @@ static int astc_alpha_one(const uint8_t *p, uint64_t size, int bw, int bh) {
 #define TEX_POOL_BLOCK (256ull << 20)
 static VmaPool tex_pool;              // set once its blocks exist (tex_pool_main)
 static uint32_t tex_pool_type;
+static PlatThread *tex_pool_thread;
 
 static void tex_pool_main(void *arg) {
     int blocks = (int)(intptr_t)arg;
@@ -336,7 +337,19 @@ void vk_tex_pool_start(void) {
                          : (int)vk_default_tex_pool_blocks(
                                c->props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, vram >> 20);
     if (blocks <= 0) return;
-    if (!plat_thread_spawn(tex_pool_main, (void *)(intptr_t)blocks, "vk tex pool", 0)) rt_log("vk: texture pool: no thread");
+    tex_pool_thread = plat_thread_new(tex_pool_main, (void *)(intptr_t)blocks, "vk tex pool");
+    if (!tex_pool_thread) rt_log("vk: texture pool: no thread");
+}
+
+// All images are gone and the device is idle. A pool must be destroyed before VMA's allocator; its creator may
+// still be allocating the minimum blocks when a short probe shuts down, so join it before taking the pool away.
+void vk_tex_pool_stop(void) {
+    if (tex_pool_thread) {
+        plat_thread_join(tex_pool_thread);
+        tex_pool_thread = NULL;
+    }
+    VmaPool pool = __atomic_exchange_n(&tex_pool, NULL, __ATOMIC_ACQ_REL);
+    if (pool) vmaDestroyPool(vk_ctx()->vma, pool);
 }
 
 VkResult vma_image(VkCtx *c, const VkImageCreateInfo *ci, const VmaAllocationCreateInfo *ai, VkImage *img,
