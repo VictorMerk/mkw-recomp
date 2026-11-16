@@ -218,7 +218,26 @@ void init_image(Tex *e, VkCommandBuffer cb) {
     VkDependencyInfo di = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &ib};
     vkCmdPipelineBarrier2(cb, &di);
     if (e->sparse) {
-        // Tiles get zeroed memory when they are bound; a clear would erase physical pages other images share.
+        // Mapped tiles get zeroed memory separately and may alias another image. Only the private small mips are ours
+        // to initialize here: VMA can reuse memory holding another texture's data, even before this image was written.
+        if (e->sparse_tail.zero_bytes) {
+            VkBuffer zeros;
+            void *map = vk_staging(e->sparse_tail.zero_bytes, &zeros, NULL);
+            memset(map, 0, (size_t)e->sparse_tail.zero_bytes);
+            uint32_t n = (e->pub.levels - e->sparse_tail.first) * e->pub.layers;
+            VkBufferImageCopy *regions = calloc(n, sizeof *regions);
+            if (!regions) rt_fatal("vk: out of memory for sparse tail initialization");
+            uint32_t k = 0;
+            for (uint32_t l = e->sparse_tail.first; l < e->pub.levels; l++) {
+                uint32_t w = e->pub.width >> l, h = e->pub.height >> l;
+                for (uint32_t layer = 0; layer < e->pub.layers; layer++)
+                    regions[k++] = (VkBufferImageCopy){.imageSubresource = {e->sparse_tail.aspect, l, layer, 1},
+                                                      .imageExtent = {w ? w : 1, h ? h : 1, 1}};
+            }
+            vkCmdCopyBufferToImage(cb, zeros, e->pub.image, VK_IMAGE_LAYOUT_GENERAL, n, regions);
+            barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, ALL_RW);
+            free(regions);
+        }
     } else if (e->f.depth || e->f.stencil) {
         VkClearDepthStencilValue zero = {0.0f, 0};
         VkImageSubresourceRange rg = {e->pub.aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
@@ -514,7 +533,7 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
     e->f = f;
     e->pub.addr = k->addr;
     VkImage img = VK_NULL_HANDLE;
-    if (vk_sparse_create(&ci, d, k->addr, L.size, &img)) e->sparse = 1;
+    if (vk_sparse_create(&ci, d, k->addr, L.size, &img, &e->sparse_tail)) e->sparse = 1;
     else if (nvn_gpu_only(k->addr)) {   // storage in a physical or virtual pool: alias the pool memory (section 3.2)
         if (vkCreateImage(c->device, &ci, NULL, &img) == VK_SUCCESS && !bind_pool_memory(c, e, img)) {
             vkDestroyImage(c->device, img, NULL);
