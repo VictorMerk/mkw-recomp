@@ -406,11 +406,12 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
     }
     Str b = {0};
     sp(&b, "vs %016llx fs %016llx prog %llu prim %d; depth test %d write %d func %d; wmask t0 %#x t1 %#x; blend0 %llx "
-           "fs outputs %#x; discard %d vp %.0f,%.0f %.0fx%.0f z %.2f-%.2f range %.2f-%.2f scissor %d,%d %dx%d (set %d) samples %u\n",
+           "blend-enable %#x fs outputs %#x; discard %d vp %.0f,%.0f %.0fx%.0f z %.2f-%.2f range %.2f-%.2f scissor %d,%d %dx%d (set %d) samples %u\n",
        (unsigned long long)shader_hash(s->vs),
        (unsigned long long)shader_hash(s->fs), (unsigned long long)(ex->prog ? ex->prog->serial : 0), s->prim,
        (int)s->ds.dt, (int)s->ds.dw, (int)s->ds.df, vk_pipeline_target_wmask(s, 0), vk_pipeline_target_wmask(s, 1),
-       (unsigned long long)*(const uint64_t *)&s->blend[0], s->fs ? gfx_shader_outputs(s->fs, NULL) : 0,
+       (unsigned long long)*(const uint64_t *)&s->blend[0], (unsigned)s->color.blend_en,
+       s->fs ? gfx_shader_outputs(s->fs, NULL) : 0,
        (int)s->raster_discard, ex->vp[0][0], ex->vp[0][1], ex->vp[0][2], ex->vp[0][3], ex->vp[0][4], ex->vp[0][5],
        ex->depth_range[0], ex->depth_range[1], ex->scissor.x, ex->scissor.y, ex->scissor.w, ex->scissor.h,
        ex->has_scissor, ex->pass_samples);
