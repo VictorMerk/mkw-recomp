@@ -184,6 +184,7 @@ void vk_dump_pass_close(VkExec *ex);   // before vkCmdEndRendering
 int vk_dump_rearm(const char *dir, int ubo, int luts, int log_n);   // MKW_CTL: dump the frame log_n + 1 ahead into dir,
                                                                    // logging the ones before; 0 while one is pending
 void vk_dump_init(void);                 // reads the environment; vk_exec_record's first call
+void vk_dump_shutdown(void);             // after completion callbacks and rtstats workers stop
 void vk_dump_pass_end(VkExec *ex);       // after vkCmdEndRendering
 void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeInfo *info);   // after a draw's binds;
                                                                                            // marks the draws MKW_DUMP_DRAWS selects
@@ -203,6 +204,7 @@ void vk_rtstats_every(uint32_t n);                            // turns it on, on
 void vk_rtstats_pass_end(VkExec *ex);                         // after vkCmdEndRendering
 void vk_rtstats_dispatch(VkExec *ex, const VkPipeInfo *info); // after a dispatch
 void vk_rtstats_flush(void);           // waits for every submission and for the checks of their copies
+void vk_rtstats_shutdown(void);        // after completion callbacks stop: joins scan workers
 uint64_t vk_rtstats_hits(int rule);    // targets that broke the rule so far, logged or not
 
 // c0, the NVN driver constant bank of one stage (vk_exec_ubuf.c; MKW_FIX_C0=0 binds zeros instead): bank is
