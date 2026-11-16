@@ -149,14 +149,17 @@ def c_string(s: str) -> str:
     return json.dumps(s)
 
 
-def game_id() -> str:
+def game_id(*, legacy_crlf: bool = False) -> str:
     """RT_GAME_ID: the headers the generated code is compiled against and its flags. A game code library built with
     another id is not loaded (runtime/core/boot/gamelib.c)."""
     h = hashlib.sha256(" ".join(GEN_FLAGS).encode())
     for p in sorted([*(RUNTIME / "cpu").glob("*.h"), RUNTIME / "core/boot/gamelib.h"]):
         # without CRs: Git for Windows checks out with CRLF (core.autocrlf=true), and a runtime built from such a clone
         # refused the release's mkwgame.dll of the same headers as "built for another version" (16/11/2026)
-        h.update(p.read_bytes().replace(b"\r\n", b"\n"))
+        data = p.read_bytes().replace(b"\r\n", b"\n")
+        # Old Windows setup hashed the CRLF checkout verbatim. Accept only that representation of these same
+        # headers and flags, never an id from another header revision; new libraries keep the canonical LF id.
+        h.update(data.replace(b"\n", b"\r\n") if legacy_crlf else data)
     return h.hexdigest()[:16]
 
 
@@ -231,6 +234,7 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     release ships and the CI builds, without the game's generated C."""
     inc = " ".join(f"-I{d}" for d in sorted({RUNTIME} | {p.parent for p in RUNTIME.rglob("*.h")}))
     gid = f'-DRT_GAME_ID=\\"{game_id()}\\"'
+    legacy_gid = f'-DRT_GAME_ID_LEGACY_CRLF=\\"{game_id(legacy_crlf=True)}\\"'
     pic = ["-fPIC"] if dist and target is LINUX else []
     link_flags = list(target.link_flags) + (ld_extra or [])
     if dist and target is LINUX:
@@ -247,7 +251,7 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     lines = [
         f"builddir = {out}",
         f"genflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} -I{RUNTIME / 'cpu'}",
-        f"rtflags = {' '.join(RT_FLAGS + target.rt_flags + rt_extra)} {gid} {inc} -I{gen} -I{out / 'rt'} -I{target.vma}",
+        f"rtflags = {' '.join(RT_FLAGS + target.rt_flags + rt_extra)} {gid} {legacy_gid} {inc} -I{gen} -I{out / 'rt'} -I{target.vma}",
         f"tabflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} {gid} {inc} -I{gen}",
         f"ldflags = {' '.join(link_flags)}",
         (
