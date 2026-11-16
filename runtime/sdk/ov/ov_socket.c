@@ -119,6 +119,26 @@ static void fail(int e) { last_errno = e; }
 
 #define B_ENETDOWN 50   // what main's stub answered: the console's BSD errno for a network that is down
 int ov_lan(void) { return cfg_bool("MKW_LAN"); }
+
+// Optional endpoint diagnostics for discovery failures; no payloads or per-frame work when disabled. Sample early
+// packets then powers of two so a long race does not produce a log for every datagram.
+static void lan_diag(const char *direction, int fd, const struct sockaddr_in *address, int64_t bytes, int error) {
+    static int on = -1;
+    int enabled = __atomic_load_n(&on, __ATOMIC_ACQUIRE);
+    if (enabled < 0) {
+        const char *value = cfg_get("MKW_LAN_DIAG");
+        enabled = value && *value && strcmp(value, "0");
+        __atomic_store_n(&on, enabled, __ATOMIC_RELEASE);
+    }
+    if (!enabled) return;
+    static volatile int32_t sent, received;
+    uint32_t n = (uint32_t)plat_inc32(!strcmp(direction, "recv") ? &received : &sent);
+    if (n > 16 && (n & (n - 1))) return;
+    char text[INET_ADDRSTRLEN] = "connected";
+    if (address) inet_ntop(AF_INET, &address->sin_addr, text, sizeof text);
+    rt_log("lan diag: %s #%u fd %d peer %s:%u bytes %lld host_error %d", direction, n, fd, text,
+           address ? (unsigned)ntohs(address->sin_port) : 0, (long long)bytes, error);
+}
 // MKW_LAN off: the call fails as main's stub did
 #define LAN_OR_DOWN(c)                                                                                                \
     do {                                                                                                               \
@@ -480,7 +500,10 @@ static void ov_recvfrom(Cpu *c) {
     ssize_t n = recvfrom(sl.s, arg_p(c, 1), (size_t)arg_x(c, 2), hf | MSG_DONTWAIT, (struct sockaddr *)&a, &alen);
 #endif
     if (n < 0) fail(host_errno());
-    else addr_out(&a, arg_p(c, 4), arg_p(c, 5));
+    else {
+        addr_out(&a, arg_p(c, 4), arg_p(c, 5));
+        lan_diag("recv", (int)arg_x(c, 0), &a, n, 0);
+    }
     ret_x(c, (uint64_t)(int64_t)n);
 }
 
@@ -510,11 +533,15 @@ static void ov_sendto(Cpu *c) {
     for (int i = 0; i < nfan; i++) {
         struct sockaddr_in p = *to;
         p.sin_addr.s_addr = fan[i];
-        if (sendto(sl.s, arg_p(c, 1), (int)arg_x(c, 2), hf, (struct sockaddr *)&p, sizeof p) >= 0) fanned = 1;
+        int64_t result = sendto(sl.s, arg_p(c, 1), (int)arg_x(c, 2), hf, (struct sockaddr *)&p, sizeof p);
+        if (result >= 0) fanned = 1;
+        lan_diag("fanout", (int)arg_x(c, 0), &p, result, result < 0 ? host_errno() : 0);
     }
     int64_t n = sendto(sl.s, arg_p(c, 1), (int)arg_x(c, 2), hf, (struct sockaddr *)to, to ? sizeof a : 0);
+    int error = n < 0 ? host_errno() : 0;
+    lan_diag("send", (int)arg_x(c, 0), to, n, error);
     if (n < 0 && fanned) n = (int64_t)arg_x(c, 2);
-    if (n < 0) fail(host_errno());
+    if (n < 0) fail(error);
     ret_x(c, (uint64_t)n);
 }
 

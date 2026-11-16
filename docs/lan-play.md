@@ -29,6 +29,10 @@ Choose **LAN Play**, create a group on one PC, and join it from the other. Check
 the runtime does not install a VPN, change firewall rules or open router ports. Closing this PowerShell window
 discards these environment overrides.
 
+For a discovery failure, set `$env:MKW_LAN_DIAG = '1'` before starting. The log samples socket endpoints, packet
+sizes and host errors, without payloads. This distinguishes a failed send from packets that arrive but do not
+produce a room in the game. Leave it unset for normal play.
+
 ## Scope and verification
 
 The guest socket layer continues to reject public IPv4 destinations, and its online-service resolver stays disabled.
