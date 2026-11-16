@@ -10,7 +10,8 @@ Both players need their own prepared installation, the same game version and com
 off on both PCs; after a successful baseline race, test the same mods together. This feature does not download,
 inspect or synchronize mods, and provides no anti-cheat system.
 
-Connect both PCs to the same LAN or an already configured private VPN. Each PC lists the other PC's private/VPN
+On the same home LAN, start with `MKW_LAN=1` and leave `MKW_LAN_PEERS` unset for ordinary broadcast discovery.
+If discovery fails, or when using an already configured private VPN, each PC can list the other PC's private/VPN
 IPv4 address, not its public internet address. For example, in a new PowerShell window in the installation folder:
 
 ```powershell
