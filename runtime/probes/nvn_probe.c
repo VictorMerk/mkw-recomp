@@ -28,6 +28,10 @@
 #include "nvn_procs.inc"
 #undef NVN_PROC
 void nvnp_nvnCommandBufferDrawMeshTasks(Cpu *c);   // NVN2 (nvn2_procs.inc)
+void nvnp_nvnCommandBufferPushGraphicsConstants(Cpu *c);
+void nvnp_nvnCommandBufferPushGraphicsConstantsDeferred(Cpu *c);
+void nvnp_nvnCommandBufferPushComputeConstants(Cpu *c);
+void nvnp_nvnCommandBufferPushComputeConstantsDeferred(Cpu *c);
 
 typedef struct { const char *name; void (*fn)(Cpu *); } ProcRow;
 static const ProcRow procs[] = {
@@ -462,6 +466,15 @@ static uint64_t record_all(void) {
     REC(OP_CLEAR_BUF, CALL(nvnCommandBufferClearBuffer, U(c), 0xc200, 0x40, 0xdeadbeef));
     REC(OP_CLEAR_BUF, CALL(nvnCommandBufferReportValue, U(c), 0x1234, 0xc300));
     REC(OP_DRAW_MESH, CALL(nvnCommandBufferDrawMeshTasks, U(c), 3, 5));
+    uint8_t push_data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    REC(OP_PUSH_CONST, CALL(nvnCommandBufferPushGraphicsConstants, U(c), 0, 0, 8, U(push_data)));
+    REC(OP_PUSH_CONST, CALL(nvnCommandBufferPushGraphicsConstantsDeferred, U(c), NVN_SHADER_STAGE_FRAGMENT, 64, 8, U(push_data)));
+    REC(OP_PUSH_CONST, CALL(nvnCommandBufferPushComputeConstants, U(c), 0, 128, 8, U(push_data)));
+    REC(OP_PUSH_CONST, CALL(nvnCommandBufferPushComputeConstantsDeferred, U(c), 0, 252, 8, U(push_data)));
+    // Out-of-bank offsets must not dereference data or append an op. Recorded data is a snapshot, not this pointer.
+    CALL(nvnCommandBufferPushGraphicsConstants, U(c), 0, 256, 8, 0);
+    CALL(nvnCommandBufferPushGraphicsConstants, U(c), 0, I(-1), 8, 0);
+    memset(push_data, 0xaa, sizeof push_data);
     static const int thresholds[4] = {1, 2, 3, 4};
     CALL(nvnCommandBufferSetColorReductionEnable, U(c), 1);   // hints: nothing recorded
     CALL(nvnCommandBufferSetColorReductionThresholds, U(c), 0, U(thresholds));
@@ -479,7 +492,7 @@ static void parse_all(uint64_t h) {
     const op_hdr *o = nvn_op_first(h);
     CHECK(o->op == OP_BEGIN, "a recording starts with OP_BEGIN");
     uint64_t bytes = 0;
-    int idx = 0, seen_state = 0, seen_tex = 0;
+    int idx = 0, seen_state = 0, seen_tex = 0, seen_push = 0;
     uint8_t kinds[OP_COUNT_] = {0};
     const tex_t *t1 = (const tex_t *)(const void *)&tex1, *t2 = (const tex_t *)(const void *)&tex2;
     for (; o->op != OP_END; o = nvn_op_next(o)) {
@@ -698,11 +711,26 @@ static void parse_all(uint64_t h) {
             CHECK(p->first == 3 && p->count == 5, "DRAW_MESH payload {%d, %d}", p->first, p->count);
             break;
         }
+        case OP_PUSH_CONST: {
+            const p_push_const *p = a;
+            const int offsets[4] = {0, 64, 128, 252}, sizes[4] = {8, 8, 8, 4};
+            const int stages[4] = {0, NVN_SHADER_STAGE_FRAGMENT, 5, 5};
+            const uint8_t want[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+            int i = seen_push++;
+            CHECK(i < 4, "PUSH_CONST unexpected extra op");
+            if (i < 4) {
+                CHECK(p->stage == stages[i] && p->offset == offsets[i] && p->size == sizes[i],
+                      "PUSH_CONST %d stage/offset/clamped size", i);
+                CHECK(!memcmp(p->data, want, (size_t)sizes[i]), "PUSH_CONST %d copied data at record time", i);
+            }
+            break;
+        }
         default: CHECK(0, "unexpected op %s", nvn_op_name(o->op)); break;
         }
     }
     bytes += o->size;   // OP_END
     CHECK(idx == nexpect, "%d of %d ops parsed", idx, nexpect);
+    CHECK(seen_push == 4, "all four push-constant entry points recorded");
     CHECK(bytes == nvn_handle_bytes(h), "the copy holds %llu bytes, the walk %llu", (unsigned long long)nvn_handle_bytes(h),
           (unsigned long long)bytes);
     int missing = 0;
