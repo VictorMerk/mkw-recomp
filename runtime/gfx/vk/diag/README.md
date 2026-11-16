@@ -2,6 +2,9 @@
 
 Back end diagnostics and measurements: frame dump, GPU time per pass and the submit timeline.
 
+At shutdown the completion callbacks drain first, the rtstats workers finish their queued scans and join, and the
+shared readback allocator is destroyed before the Vulkan device. Diagnostic buffers never outlive their allocator.
+
 | File | What it is |
 |---|---|
 | `vk_timeline.c` | `MKW_TRACE_TL=1` (measurement): each frame's submits on a single clock (game, replay, calibrated GPU, fence, waits), one line every 600 frames |
