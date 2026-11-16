@@ -31,7 +31,7 @@ static uint32_t route_to(uint32_t peer) {
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa)) return 0;
     SOCKET s = socket(AF_INET, SOCK_DGRAM, 0);
-    if (s == INVALID_SOCKET) return 0;
+    if (s == INVALID_SOCKET) { WSACleanup(); return 0; }
     int len;
 #else
     int s = socket(AF_INET, SOCK_DGRAM, 0);
@@ -46,6 +46,7 @@ static uint32_t route_to(uint32_t peer) {
         r = me.sin_addr.s_addr;
 #ifdef _WIN32
     closesocket(s);
+    WSACleanup();   // this route query owns one temporary WSAStartup reference
 #else
     close(s);
 #endif
