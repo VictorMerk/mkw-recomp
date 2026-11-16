@@ -45,6 +45,7 @@ typedef SOCKET HostSock;
 #define HOST_BAD INVALID_SOCKET
 #define host_close closesocket
 #define host_poll WSAPoll
+#define peer_token strtok_s
 #else
 #include <errno.h>
 #include <fcntl.h>
@@ -61,6 +62,7 @@ typedef int HostSock;
 #define HOST_BAD (-1)
 #define host_close close
 #define host_poll poll
+#define peer_token strtok_r
 #endif
 
 #include "cfg.h"
@@ -136,8 +138,11 @@ static void lan_diag(const char *direction, int fd, const struct sockaddr_in *ad
     if (n > 16 && (n & (n - 1))) return;
     char text[INET_ADDRSTRLEN] = "connected";
     if (address) inet_ntop(AF_INET, &address->sin_addr, text, sizeof text);
-    rt_log("lan diag: %s #%u fd %d peer %s:%u bytes %lld host_error %d", direction, n, fd, text,
-           address ? (unsigned)ntohs(address->sin_port) : 0, (long long)bytes, error);
+    // A timestamp on sampled packets lets two PCs' logs be aligned at a session transition or a loading stall.
+    // Keep the clock query after sampling: no extra call for ordinary packets or with diagnostics disabled.
+    rt_log("lan diag: %s #%u fd %d peer %s:%u bytes %lld host_error %d utc_ms=%llu", direction, n, fd, text,
+           address ? (unsigned)ntohs(address->sin_port) : 0, (long long)bytes, error,
+           (unsigned long long)(plat_unix_time_ns() / 1000000ull));
 }
 // MKW_LAN off: the call fails as main's stub did
 #define LAN_OR_DOWN(c)                                                                                                \
@@ -269,7 +274,7 @@ static int peers_get(uint32_t *out, int max) {
         npeers = 0;
         char buf[512], *save = NULL;
         snprintf(buf, sizeof buf, "%s", e);
-        for (char *t = strtok_r(buf, ", ;\t", &save); t && npeers < OV_LAN_PEERS_MAX; t = strtok_r(NULL, ", ;\t", &save)) {
+        for (char *t = peer_token(buf, ", ;\t", &save); t && npeers < OV_LAN_PEERS_MAX; t = peer_token(NULL, ", ;\t", &save)) {
             struct in_addr a = {0};
             if (inet_pton(AF_INET, t, &a) != 1 && !net_startup()) {
                 struct addrinfo hint = {.ai_family = AF_INET, .ai_socktype = SOCK_DGRAM}, *r = NULL;

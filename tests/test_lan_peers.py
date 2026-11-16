@@ -1,7 +1,7 @@
 """Compile real LAN overrides and exercise owned loopback sockets, without a game or external network.
 
 Why: VPN discovery must preserve opt-in behavior, reject public destinations and fan out only broadcasts.
-Usage: uv run pytest tests/test_lan_peers.py; Windows needs a MinGW-compatible clang on PATH.
+Usage: uv run pytest tests/test_lan_peers.py; Windows supports Clang with either the Microsoft CRT or MinGW.
 """
 
 from pathlib import Path

@@ -9,13 +9,22 @@
 
 static const char *test_peers = "", *test_ip = "";
 static int test_lan;
+static char last_packet_log[512];
 const char *cfg_get(const char *name) {
     if (!strcmp(name, "MKW_LAN_PEERS")) return test_peers;
     if (!strcmp(name, "MKW_LAN_IP")) return test_ip;
+    if (!strcmp(name, "MKW_LAN_DIAG")) return "1";
     return NULL;
 }
 int cfg_bool(const char *name) { return !strcmp(name, "MKW_LAN") && test_lan; }
-void rt_log(const char *fmt, ...) { (void)fmt; }
+void rt_log(const char *fmt, ...) {
+    if (strncmp(fmt, "lan diag:", 9)) return;
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(last_packet_log, sizeof last_packet_log, fmt, ap);
+    va_end(ap);
+}
+uint64_t plat_unix_time_ns(void) { return 1700000000123000000ull; }
 void plat_mutex_lock(PlatMutex *m) { (void)m; }
 void plat_mutex_unlock(PlatMutex *m) { (void)m; }
 void mem_commit_range(uint64_t a, uint64_t n) { (void)a; (void)n; }
@@ -115,6 +124,9 @@ int main(void) {
     received(sa, 1); received(sb, 0); // direct sends must not fan out
     assert(send_guest(fd, ip("8.8.8.8"), a.sin_port) == -1 && last_errno == G_ENETUNREACH);
     received(sa, 0); received(sb, 0);
+    assert(strstr(last_packet_log, "utc_ms=1700000000123"));
+    assert(strstr(last_packet_log, "bytes 5 host_error 0"));
+    assert(!strstr(last_packet_log, "hello"));   // packet data stays out of diagnostics
     c = (Cpu){0}; c.x[0] = fd; ov_close(&c);
     assert(!c.x[0]);
     host_close(sa); host_close(sb);

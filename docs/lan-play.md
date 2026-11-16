@@ -31,7 +31,8 @@ the runtime does not install a VPN, change firewall rules or open router ports. 
 discards these environment overrides.
 
 For a discovery failure, set `$env:MKW_LAN_DIAG = '1'` before starting. The log samples socket endpoints, packet
-sizes and host errors, without payloads. This distinguishes a failed send from packets that arrive but do not
+sizes, host errors and UTC milliseconds, without payloads. The timestamps help correlate both PCs at a session
+transition or loading pause. This distinguishes a failed send from packets that arrive but do not
 produce a room in the game. Leave it unset for normal play.
 
 ## Scope and verification
