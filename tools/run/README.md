@@ -30,6 +30,7 @@ through `job.sh`.
 | `gpu_ok.sh` | Refuses when amdgpu logged since boot a failed ring reset or a full GPU reset (after a failed reset, the next replay froze the machine); episodes recovered in the ring, however many, let it go on. Called by `live.sh`, `run_perf.sh` and `replay.sh`, which set `MKW_GPU_GUARD=1` | `gpu_ok.sh` |
 | `avail.sh` | MB available for a run: `MemAvailable` plus `GPUReclaim` (TTM page pool the kernel releases under pressure); used by the thresholds of `live.sh`, `run_perf.sh` and `replay.sh`; `--wait FLOOR` waits up to `WAIT_MEM` minutes for it | `avail.sh`, `WAIT_MEM=30 tools/run/race.sh NAME` |
 | `memwatch.sh`, `memtop.sh` | RSS, swap, GTT and VRAM every 5 s; memory maps with their Rss after N seconds | `memwatch.sh OUT.tsv`, `memtop.sh AT OUT` |
+| `memwatch.ps1` | Windows counterpart: an observed PID's private/resident memory, CPU time and handles, system available memory/commit, and optional per-process GPU counters; UTC/QPC times and sampling cost go to a local TSV. Stops when that process exits and never stops the process; refuses an existing output file | `powershell -NoProfile -File tools/run/memwatch.ps1 -TargetProcessId 1234 -OutPath build/run/memory.tsv` (`-NoGpuCounters` skips GPU queries; `-Samples N` limits the observer only) |
 | `stacks.py` | Stacks of every thread of a running `build/mkw`, with the game's names | see its header |
 | `summary.py` | A log summed up in ~15 lines: how it ended, last frame and phases, median and p95 frame time before and during the race, VRAM peak, `MKW_HOST_TIME` census, grouped failures and the game speed (a warning when the race runs in slow motion) | `uv run tools/run/summary.py build/run/NAME.log [...]` |
 | `gpucmp.py` | The race's GPU time of several runs side by side: median `gpu avg` and interval per 60-frame window in the race, whole `MKW_PASS_TIMING=1` windows in the race (busy and the largest pass) and the last texture memory; for changes without an in-run switch (`MKW_ASTC_BC1`) | `uv run tools/run/gpucmp.py build/run/NAME.log [...]` |
@@ -38,3 +39,9 @@ through `job.sh`.
 | `wine.sh` | An `.exe` (`build/mkw.exe`, a self-test) in Wine with its own prefix in `build/win/wineprefix`, without Mono or Gecko: it shows no dialogs and does not touch `~/.wine`. Its `Desktop` is your desktop folder (Wine links it in every new prefix): what a test creates on the desktop (a `.lnk`) is deleted by hand | `tools/run/wine.sh PROGRAM.exe [ARGS...]` |
 | `envs.py` | Catalogue of the `MKW_*` variables the runtime reads (`cfg_get` and `rt_knob`): where and their comment, taken from the code | `uv run tools/run/envs.py [REGEX]` |
 | `sym.py` | Names the `build/mkw` addresses of the log (`exe+`, `mkw+`, base 0x200000) and, for translated code, its game function | `uv run tools/run/sym.py DIR...` or `< build/run/NAME.log` |
+
+The Windows memory TSV uses bytes, cumulative CPU seconds, UTC and QueryPerformanceCounter ticks. `virtual_bytes`
+includes reserved guest address space; it is not RAM consumption. GPU columns are Windows process counters, not a
+physical-residency measurement, and stay blank when the provider is unavailable. `sample_ms` records observation cost.
+Compare memory across races and a return to the menu alongside frame-time logs: a retained cache alone does not prove
+a leak. The observer records no process memory contents, command line or configuration, and sends nothing off the PC.
