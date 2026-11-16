@@ -5,6 +5,7 @@ end's regression test runs over captures instead (`tools/test/`).
 
 | File | What it checks |
 |---|---|
+| `test_gamelib_id.py` | Canonical and legacy CRLF header hashes, invalidation after header/flag changes, and the actual library guard's ABI, table-bound and sidecar checks with synthetic data |
 | `test_lan_peers.py` | Actual LAN socket overrides with owned UDP sockets: opt-in, peer filtering and refresh, loopback binding, broadcast fanout, direct-send isolation and public-address rejection |
 | `test_warp32.py` | Executes the translator's actual shuffle/ballot helpers and emitted signed/unsigned reductions as C++ on synthetic 32/64/128-lane subgroups, with distinct values per logical warp and partially active masks |
 | `test_spirv_images.py` | Integer image variants of synthetic compute shaders through the production patcher (`c/t_spirv_images.c`): signed and unsigned storage images, separate image/sampler construction, input preservation and actionable failure reasons; optional SPIR-V validation |
