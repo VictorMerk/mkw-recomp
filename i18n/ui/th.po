@@ -870,6 +870,60 @@ msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr "ผู้เล่น %d คนต้องมีจอยคนละตัว: เชื่อมต่ออยู่ %d คีย์บอร์ดนับเฉพาะผู้เล่น 1"
 
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "จอย"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "ผู้เล่น %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"แบตเตอรี่ของจอยผู้เล่นแต่ละคน ตามที่จอยรายงาน จอยบางรุ่นไม่รายงาน จอย Switch 2 "
+"ผ่านบลูทูธรายงานเป็นแรงดันไฟ แสดงเป็นสูง กลาง หรือต่ำ"
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "ไม่ได้เสียบจอย"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "ต่ำ"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "กลาง"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "สูง"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "กำลังชาร์จ"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "ชาร์จเต็มแล้ว"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "ใช้สาย"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "ไม่มีข้อมูลแบตเตอรี่"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "จอยของผู้เล่น %d แบตเตอรี่ใกล้หมด (%s)"
+
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
 msgstr "รีเซ็ตปุ่มทั้งหมด"

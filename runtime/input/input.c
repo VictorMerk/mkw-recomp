@@ -276,6 +276,7 @@ static void start(void) {
         attach_virtual_pads();
         switch2_start();   // Switch 2 controllers over Bluetooth, as virtual gamepads (MKW_SWITCH2)
         scan_pads();
+        input_power_start();   // its own thread: the low battery notice
         if (!pad) rt_log("input: no gamepad (keyboard only until one is connected)");
     }
     if (state == -1) state = 2;   // keyboard only
@@ -541,6 +542,27 @@ int input_capture(int reset, int *id) {
     memcpy(prev_p, p, sizeof p);
     prev_esc = esc;
     return got;
+}
+
+int input_gamepads_running(void) {
+    plat_mutex_lock(&lock);
+    int on = state == 1;
+    plat_mutex_unlock(&lock);
+    return on;
+}
+
+int input_pad_power_sdl(int player, char *name, size_t name_size, uint32_t *id, int *percent) {
+    int st = -2;   // no gamepad
+    plat_mutex_lock(&lock);
+    SDL_Gamepad *g = player <= 0 ? pad : player < INPUT_MAX_PLAYERS ? extra[player] : NULL;
+    if (state == 1 && g && SDL_GamepadConnected(g)) {
+        const char *n = SDL_GetGamepadName(g);
+        snprintf(name, name_size, "%s", n ? n : "");
+        *id = SDL_GetGamepadID(g);
+        st = SDL_GetGamepadPowerInfo(g, percent);
+    }
+    plat_mutex_unlock(&lock);
+    return st;
 }
 
 int input_rumble_triggers_enabled(void) {

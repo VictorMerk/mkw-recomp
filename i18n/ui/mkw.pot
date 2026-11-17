@@ -808,6 +808,56 @@ msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr ""
 
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr ""
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid "The battery of each player's controller, as the controller reports it. Some controllers report none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr ""
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr ""
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr ""
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr ""
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr ""
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr ""
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr ""
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr ""
+
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
 msgstr ""

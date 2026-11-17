@@ -26,7 +26,7 @@ linked (the runtime reads its RomFS in place).
 Output: one event per line on stdout, for the start screen: "step <name>", "progress <done> <total>", "skip <name>",
 "done", "error <code> <detail>". Exit codes: 0 done, 1 failed, 2 bad command line. The start screen shows its own
 translated text per code with the detail inside: source (no earlier setup to repeat), moved (the last setup's folder,
-gone: moved or renamed, #188), nogame (the folder, without exefs/main and romfs/), encrypted (exefs/main, not an NSO), version (main's build id), romfs (its file count), failed
+gone: moved or renamed, #188; a copy's game folder stands in for it, #501), nogame (the folder, without exefs/main and romfs/), encrypted (exefs/main, not an NSO), version (main's build id), romfs (its file count), failed
 (a tool's English message) and io (the system's); logs/setup.log gets the English message whole.
 
 Usage: python prepare.py --source DIR|FILE.nup --game DIR [--runtime DIR] [--romfs copy|link] [--jobs N]
@@ -73,7 +73,7 @@ import game_texts  # (build_all: the game's texts in ca, gl, eu)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gamecode import DamagedSource, compile_game
 from gamesource import check, is_nx, loose_romfs, unpack
-from gamecopy import BUILD_BYTES, check_space, clear_dir, copy_tree, remove_stale, romfs_bytes, tree_bytes
+from gamecopy import BUILD_BYTES, check_space, clear_dir, copy_tree, own_dir, remove_stale, romfs_bytes, tree_bytes
 from nup import Nup
 from machine import (
     ZIG_CACHE,
@@ -265,10 +265,16 @@ def main() -> None:
             emit("error", "source", "no earlier setup in this folder")
             sys.exit(2)
         args.source = Path(last)
-        if not args.source.exists():
-            emit("error", "moved", last)
-            sys.exit(1)
         args.romfs = args.romfs or state.get("romfs_mode") or state["done"].get("romfs", "copy").split(" ", 1)[0]
+        if not args.source.exists():
+            # a copy keeps the whole game in this folder: once the player deleted the original files, this folder is
+            # the source (#501: "choose it again" was impossible after an update, and choosing the game folder worked)
+            if args.romfs == "copy" and (game / "exefs/main").is_file() and own_dir(game / "romfs", Path(last)):
+                print(f"setup: {last} is gone; the copy in {game} is the source", file=sys.stderr)
+                args.source = game
+            else:
+                emit("error", "moved", last)
+                sys.exit(1)
     args.romfs = args.romfs or "copy"
     src = args.source.resolve()
     state["source"], state["romfs_mode"] = str(src), args.romfs
