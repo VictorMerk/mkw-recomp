@@ -4,6 +4,7 @@ Pieces of `runtime/` built alone: audio, controllers, memory caps, settings and 
 
 | File | What it checks |
 |---|---|
+| `test_capture_snapshot.py` | Production capture memory with synthetic pages: consecutive captures start independently, including unchanged module pages and read-trapped pages; unchanged within-capture deltas stay empty |
 | `test_memwatch.py` | Native Windows process-memory collection: observes an allocated 64 MiB increase, preserves logs and exits with its owned target; no game or GPU |
 | `test_gamelib_id.py` | Canonical and legacy CRLF header hashes, invalidation after header/flag changes, and production library-guard rejection with synthetic data |
 | `test_lan_peers.py` | Production socket overrides with owned UDP endpoints: opt-in, peer filtering and refresh, loopback binding, broadcast fanout, direct-send isolation, public-address rejection and timestamped diagnostics; Linux and Windows |
@@ -19,6 +20,7 @@ C sources the tests here build with the compiler at hand and run:
 
 | File | Built by | What it checks |
 |---|---|---|
+| `t_capture_snapshot.c` | `test_capture_snapshot.py` | Snapshot/delta capture path with two synthetic guest pages and platform stubs; no game or GPU |
 | `t_gamelib_id.c` | `test_gamelib_id.py` | Actual library guard with synthetic tables and sidecars: canonical/CRLF ids accepted; incompatible ids, ABI and table bounds rejected |
 | `t_lan_peers.c` | `test_lan_peers.py` | Single-thread production socket overrides with synthetic guest registers and owned loopback UDP endpoints; no external traffic |
 | `t_switch2.c` | `test_switch2.py` | The Switch 2 controllers' protocol (`runtime/input/switch2_proto.h`): from seedds/mkw-neo (MIT), with reports and replies recorded from a left and a right Joy-Con 2 |
