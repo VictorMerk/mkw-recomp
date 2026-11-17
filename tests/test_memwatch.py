@@ -24,16 +24,24 @@ class MemoryWatchTests(unittest.TestCase):
         self.shell = shutil.which("powershell")
         if not self.shell:
             self.skipTest("Windows PowerShell is unavailable")
-        # Allocation is requested after the observer has sampled the baseline.
+        # Commit a new OS allocation after the observer's baseline. Python/CRT allocators may reuse memory already
+        # committed at interpreter startup, so bytearray() does not guarantee an increase in process-private bytes.
+        self.allocate_signal = Path(self.temp.name) / "allocate.request"
         code = (
-            "import sys,time\nprint('READY',flush=True)\nsys.stdin.readline()\n"
-            "data=bytearray(64*1024*1024)\n"
-            "for i in range(0,len(data),4096):data[i]=1\n"
+            "import ctypes,os,sys,time\n"
+            "kernel=ctypes.WinDLL('kernel32',use_last_error=True)\n"
+            "kernel.VirtualAlloc.argtypes=[ctypes.c_void_p,ctypes.c_size_t,ctypes.c_ulong,ctypes.c_ulong]\n"
+            "kernel.VirtualAlloc.restype=ctypes.c_void_p\n"
+            "print('READY',flush=True)\n"
+            "while not os.path.exists(sys.argv[1]):time.sleep(0.01)\n"
+            "data=kernel.VirtualAlloc(None,64*1024*1024,0x3000,0x04)\n"
+            "if not data:raise ctypes.WinError(ctypes.get_last_error())\n"
+            "ctypes.memset(data,1,64*1024*1024)\n"
             "print('ALLOCATED',flush=True)\ntime.sleep(60)\n"
         )
         self.child = subprocess.Popen(
-            [sys.executable, "-u", "-c", code],
-            stdin=subprocess.PIPE,
+            [sys.executable, "-u", "-c", code, str(self.allocate_signal)],
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             text=True,
             creationflags=subprocess.CREATE_NO_WINDOW,
@@ -97,8 +105,7 @@ class MemoryWatchTests(unittest.TestCase):
     def test_measures_allocation_and_preserves_an_existing_log(self):
         watcher = self.watcher("-Samples", "12")
         self.wait_rows(2, watcher)
-        self.child.stdin.write("allocate\n")
-        self.child.stdin.flush()
+        self.allocate_signal.touch()
         self.assertEqual(self.child.stdout.readline().strip(), "ALLOCATED")
         _, stderr = watcher.communicate(timeout=20)
         self.assertEqual(watcher.returncode, 0, stderr)
@@ -106,7 +113,7 @@ class MemoryWatchTests(unittest.TestCase):
         self.assertEqual(len(rows), 12)
         private = [int(row["private_bytes"]) for row in rows]
         self.assertTrue(all(value > 0 for value in private), private)
-        self.assertGreater(max(private) - min(private[:2]), 48 * 1024 * 1024)
+        self.assertGreater(max(private) - min(private[:2]), 48 * 1024 * 1024, private)
         self.assertTrue(all(row["gpu_dedicated_bytes"] == "" for row in rows))
         ticks = [int(row["qpc_ticks"]) for row in rows]
         self.assertEqual(ticks, sorted(ticks))
