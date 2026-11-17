@@ -11,6 +11,11 @@ void input_poll(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_
 // reports nothing; input_block(0) when it closes: nothing until all buttons and stick directions are released.
 void input_poll_ui(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
 void input_block(int on);
+// Racing wheels (wheel.c, #488): input_wheel_hint before SDL's gamepad init reads gamecontrollerdb.txt from the game
+// folder when there is one; input_wheel_map gives each wheel SDL has no mapping for a gamepad mapping, so
+// SDL_GetGamepads lists it. Same thread as the other SDL gamepad calls.
+void input_wheel_hint(void);
+void input_wheel_map(void);
 // Local multiplayer, players 1-8 (player index 0-7). Player 1 is input_poll: the keyboard, the first gamepad and the
 // script. Each other player is one more gamepad, in connection order, plus the script's "p<N>" lines; MKW_VIRTUAL_PADS=N
 // attaches N virtual gamepads at start to try it without controllers. Any thread.

@@ -166,6 +166,7 @@ static void scan_pads(void) {
             SDL_CloseGamepad(extra[p]); extra[p] = NULL; sensor_pad[p] = 0; sensor_ok[p] = 0;
             rt_log("input: gamepad of player %d disconnected", p + 1);
         }
+    input_wheel_map();
     int n = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
     for (int i = 0; ids && i < n; i++) {
@@ -270,6 +271,7 @@ static void start(void) {
     binds_refresh();
     const char *e = cfg_get("MKW_INPUT");
     if (e && !strcmp(e, "none")) { state = -1; rt_log("input: disabled (MKW_INPUT=none)"); return; }
+    input_wheel_hint();
     if (!SDL_Init(SDL_INIT_GAMEPAD)) { state = -1; rt_log("input: SDL gamepad init failed (%s), keyboard only", SDL_GetError()); }
     else state = 1;
     if (state == 1) {
