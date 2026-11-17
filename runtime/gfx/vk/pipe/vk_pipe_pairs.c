@@ -4,7 +4,8 @@
 // still compiling, and those draws were skipped (#500: 17 616 on a B580 starting with 1 159 keys). The expensive part
 // of a pipeline under the graphics pipeline library (vk_pipe_gpl.c) is its two shader libraries, and they depend on
 // little besides the shader: pre-rasterization on the vertex shader and the union of its pairs' fragment inputs
-// (vs_outs), fragment on the fragment shader, its sample count, alpha to coverage, alpha test and dual-source rewrite.
+// (vs_outs), fragment on the fragment shader, its sample count, alpha to coverage, alpha test function (its reference
+// is read from the support buffer) and dual-source rewrite.
 // A census of 6 165 recorded pipelines (17/11/2026, tools/shaders/pipeline_keys.py) had 1 sample in all,
 // the alpha test in 29 and about one fragment library per fragment shader. So the libraries of every pair the copy's
 // programs can form (pipeline-pairs.bin, tools/shaders/pipeline_pairs.py at setup) are built here with the common
@@ -21,20 +22,27 @@
 #include "platform/platform.h"
 #include "vk_pipe_internal.h"
 
-#define PAIRS_VERSION 1
+#define PAIRS_VERSION 2
+#define PAIR_ALPHA 1u           // PairRec.flags: the fragment stage may draw with NVN's alpha test (pipeline_pairs.py)
 #define PAIRS_STALL_MS 20000u   // as PREWARM_STALL_MS: this long without a library finished and the boot goes on
 
 typedef struct { char magic[8]; uint32_t version, count; } PairsHeader;
-typedef struct { uint8_t vs[32], fs[32]; } PairRec;
+typedef struct { uint8_t vs[32], fs[32]; uint32_t flags; } PairRec;
 typedef struct { int kind; Lib *b; Layout *l; VkPipeState s; GKey k; } PairJob;
 
-static struct { PairJob *j; size_t n; volatile int64_t next, done; int no_stall; } PJ;
+// finished: every library built, no thread left reading SPIR-V (vk_pipeline_prewarm releases it then)
+static struct { PairJob *j; size_t n; volatile int64_t next, done; int no_stall, finished; } PJ;
+
+// The alpha test functions the game draws with (pipeline_pairs.py: GREATER and GEQUAL in every recorded pipeline with
+// the test on), as GKey.alpha_func: VkCompareOp + 1. The reference is no part of a pipeline (spirv_alpha_test).
+static const uint8_t alpha_funcs[] = {VK_COMPARE_OP_GREATER + 1, VK_COMPARE_OP_GREATER_OR_EQUAL + 1};
 
 static int id_cmp(const void *x, const void *y) { return memcmp(x, y, 32); }
 
 static void pairs_worker(void *arg) {
     plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
+    gfx_shader_spirv_quiet(1);   // not a draw's use: the SPIR-V may be released after the prewarm
     plat_mutex_lock(&P.lock);
     for (int64_t i; (i = plat_inc64(&PJ.next) - 1) < (int64_t)PJ.n;) {
         PairJob *j = &PJ.j[i];
@@ -53,10 +61,10 @@ static void pair_state(VkPipeState *s, const GfxShader *vs, const GfxShader *fs)
 }
 
 // Queues the library of kind for key unless one exists. Caller holds P.lock.
-static void queue_lib(PairJob *jobs, size_t *n, int kind, const void *key, uint32_t size, Layout *l,
+static void queue_lib(PairJob *jobs, size_t *n, size_t cap, int kind, const void *key, uint32_t size, Layout *l,
                       const VkPipeState *s, const GKey *k) {
     uint64_t h = key_hash(key, size);
-    if (lib_find(h, key, size)) return;
+    if (*n == cap || lib_find(h, key, size)) return;
     Lib *b = lib_new(h, key, size);
     if (b) jobs[(*n)++] = (PairJob){.kind = kind, .b = b, .l = l, .s = *s, .k = *k};
 }
@@ -114,7 +122,7 @@ static const GfxShader *fs_int_variant(const GfxShader *fs) {
 static void fs_key(const GKey *k, const GfxShader *fs, FsKey *fk) {
     memset(fk, 0, sizeof *fk);
     fk->kind = LIB_FS, fk->fs = fs, fk->dsb = k->dsb, fk->samples = k->samples, fk->a2c = k->a2c;
-    fk->alpha_func = k->alpha_func, fk->alpha_ref = k->alpha_ref;
+    fk->alpha_func = k->alpha_func;
 }
 
 // A record's loaded shaders (an all-zero key: none) and the integer variants of each (var: by index in ids); 0 when a
@@ -154,9 +162,8 @@ void pairs_prewarm(void) {
     double t0 = (double)plat_now_ns() / 1e6;
     uint8_t (*ids)[32] = malloc(2 * n * 32);
     const GfxShader **sh = calloc(2 * n, sizeof *sh);
-    PairJob *jobs = malloc(2 * n * sizeof *jobs);
-    if (!ids || !sh || !jobs) {
-        free(r), free(ids), free(sh), free(jobs);
+    if (!ids || !sh) {
+        free(r), free(ids), free(sh);
         return;
     }
     for (size_t i = 0; i < n; i++) memcpy(ids[2 * i], r[i].vs, 32), memcpy(ids[2 * i + 1], r[i].fs, 32);
@@ -169,11 +176,18 @@ void pairs_prewarm(void) {
 
     // Each shader's integer variant, then the unions: a library key taken before the last pair of its
     // vertex shader entered would not be a draw's.
+    // At most one library per shader and per variant, and per alpha-tested record a fragment one per function for its
+    // shader and its variant: lib_find takes the repeats.
+    size_t nalpha = 0;
+    for (size_t i = 0; i < n; i++) nalpha += (r[i].flags & PAIR_ALPHA) != 0;
+    size_t cap = 2 * u + 2 * sizeof alpha_funcs * nalpha;
     const GfxShader **var = calloc(u, sizeof *var);
-    if (!var) {
-        free(r), free(ids), free(sh), free(jobs);
+    PairJob *jobs = malloc(cap * sizeof *jobs);
+    if (!var || !jobs) {
+        free(r), free(ids), free(sh), free(var), free(jobs);
         return;
     }
+    gfx_shader_spirv_quiet(1);   // the variants, unions and layouts below read SPIR-V as the workers do
     uint32_t used = 0, dropped = 0, variants = 0;
     for (size_t i = 0; i < u; i++) {
         int st = sh[i] ? gfx_shader_stage(sh[i]) : -1;
@@ -219,11 +233,18 @@ void pairs_prewarm(void) {
                 PrKey pk;
                 FoKey ok;
                 lib_keys(&s, &k, &vk_, &pk, &fk, &ok);
-                queue_lib(jobs, &nj, LIB_PR, &pk, sizeof pk, l, &s, &k);
+                queue_lib(jobs, &nj, cap, LIB_PR, &pk, sizeof pk, l, &s, &k);
             } else {
                 fs_key(&k, s.fs, &fk);
             }
-            if (!x) queue_lib(jobs, &nj, LIB_FS, &fk, sizeof fk, l, &s, &k);
+            if (x) continue;
+            queue_lib(jobs, &nj, cap, LIB_FS, &fk, sizeof fk, l, &s, &k);
+            for (size_t a = 0; s.fs && r[i].flags & PAIR_ALPHA && a < sizeof alpha_funcs; a++) {
+                GKey ka = k;
+                FsKey fa = fk;
+                ka.alpha_func = fa.alpha_func = alpha_funcs[a];
+                queue_lib(jobs, &nj, cap, LIB_FS, &fa, sizeof fa, l, &s, &ka);
+            }
         }
     }
     plat_mutex_unlock(&P.lock);
@@ -249,6 +270,8 @@ void pairs_prewarm(void) {
             rt_log("vk_pipeline: pairs prewarm: %lld of %zu shader libraries, %.0f ms", (long long)PJ.done, nj, now - t1);
             if ((stalled = !PJ.no_stall && now - last_t >= PAIRS_STALL_MS)) break;
         }
+    gfx_shader_spirv_quiet(0);
+    PJ.finished = !stalled;
     if (stalled) {
         for (i--; i < nt; i++) plat_thread_detach(t[i]);
         rt_log("vk_pipeline: pairs prewarm: no library finished in %u ms; the game starts, %lld of %zu still building",
@@ -259,6 +282,13 @@ void pairs_prewarm(void) {
     rt_log("vk_pipeline: pairs prewarm: %zu records in %s (%u used, %u dropped), %zu shaders and %u integer "
            "variants; %zu shader libraries on %d threads; shaders %.0f ms, libraries %.0f ms",
            n, path, used, dropped, u, variants, nj, nt, t1 - t0, (double)plat_now_ns() / 1e6 - t1);
+}
+
+// After the whole prewarm: the SPIR-V only the pairs prewarm read is freed (gfx_shader_spirv_release), unless its
+// threads were left building.
+void pairs_release(void) {
+    if (PJ.finished) gfx_shader_spirv_release();
+    PJ.finished = 0;
 }
 
 // mkw --prewarm: the boot's prewarm without the game, for the setup's warm step: every library and recorded pipeline

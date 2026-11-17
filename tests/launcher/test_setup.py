@@ -269,11 +269,10 @@ assert machine.package_dir(Path(sys.argv[2])) == Path(sys.argv[3])
 def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     game, runtime = tmp_path / ODD / "game", tmp_path / "launcher"
     calls = []
-    process = SimpleNamespace(returncode=0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
-        return process
+        return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(prepare.subprocess, "run", start)
     prepare.warm(game, game / "setup-work", runtime)
@@ -295,11 +294,10 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     alias.symlink_to(target, target_is_directory=True)
     runtime, source = tmp_path / "launcher", tmp_path / "dump"
     calls = []
-    process = SimpleNamespace(returncode=0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
-        return process
+        return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(prepare, "own_children", lambda: None)
     monkeypatch.setattr(prepare.update, "ca_file", lambda: None)
