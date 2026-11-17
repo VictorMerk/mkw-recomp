@@ -15,7 +15,8 @@ Steps, into --game (by default the folder of mkw / mkw.exe):
   compile   that C with the package's zig (or clang) into mkwgame.so / mkwgame.dll
   shaders   the SM86 spec built here from NVIDIA's nvdisasm (sm86/spec/spec.py, into sm86/; never shipped), then
             tools/shaders/extract.py and translate.py into spirv/
-  warm      the game run once for a minute: the driver's pipeline cache and the pipeline keys for the first start
+  warm      mkw --prewarm, without the game: the shader libraries of every program pair of the copy into the driver's
+            pipeline cache for the first start
   cleanup   setup-work removed but its obj/ and zig-cache/: the next update compiles only the chunks whose C changed
             (gamecode.py), and zig does not build its libc again
 
@@ -96,7 +97,7 @@ from versions import Version
 
 SHADER_DIRS = ("Effect", "Layout", "Lib")  # extract.py's SHADER_DIRS: with Shader/, the RomFS folders it reads
 STEPS = ("check", "exefs", "romfs", "generate", "compile", "shaders", "warm", "cleanup")
-WARM_SECONDS = 60  # the driver cache is saved every 20 s and the pipeline keys every 2 (vk_pipeline.c, vk_pipe_keys.c)
+WARM_TIMEOUT = 1800  # mkw --prewarm: ~10 000 shader libraries compiled cold on every core
 
 
 def ini_set(ini: Path, key: str, value: str) -> None:
@@ -189,25 +190,26 @@ COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", Path(__file__).with_name(
 
 
 def warm(game: Path, work: Path, runtime: Path | None = None) -> None:
-    """The game run once to its title, so the first real start finds pipeline-cache.bin and pipeline-keys.bin. Its
-    saves go to a scratch profile: the player's first start stays a first start. The window opens without taking focus
-    and without sound; the run is ended after WARM_SECONDS. Its log is logs/warm.log: in mkw.log it pushed the player's
-    last run out of the file reports attach and the start screen reads (#437, 16/11/2026)."""
+    """mkw --prewarm, without the game: the shader libraries of every program pair of the copy (pipeline-pairs.bin,
+    from the shaders step) compiled into the driver's caches and pipeline-cache.bin, so the first start only loads
+    them (runtime/gfx/vk/pipe/vk_pipe_pairs.c). Until 17/11/2026 this ran the game for a minute and kept the keys of
+    what its title drew; a new place still drew with libraries compiling. Its log is logs/warm.log (#437: in mkw.log
+    it pushed the player's last run out of the file reports attach). A driver that crashes or hangs here does not fail
+    the setup: the prewarm's mark (pipeline-keys.prewarm) then skips it at every start on that GPU and driver, and the
+    game builds its pipelines as it draws, as before."""
     exe = (runtime or game) / ("mkw.exe" if os.name == "nt" else "mkw")
-    env = dict(os.environ, MKW_LAUNCHED="1", MKW_ASSUME_FOCUS="1", MKW_AUDIO="none", MKW_LOG_NAME="warm",
-               MKW_GAME_DIR=str(game), MKW_PROFILE_DIR=str(work / "warm-profile"))  # fmt: skip
-    p = subprocess.Popen([str(exe)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for t in range(WARM_SECONDS):
-        if p.poll() is not None:
-            raise Failed(f"the game stopped while warming up (exit {p.returncode}); its log is {game / 'logs/warm.log'}")
-        emit("progress", t, WARM_SECONDS)
-        time.sleep(1)
-    p.terminate()
+    env = dict(os.environ, MKW_LOG_NAME="warm", MKW_GAME_DIR=str(game))
+    emit("progress", 0, 1)
     try:
-        p.wait(10)
+        p = subprocess.run([str(exe), "--prewarm"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=WARM_TIMEOUT, check=False)  # fmt: skip
     except subprocess.TimeoutExpired:
-        p.kill()
-    emit("progress", WARM_SECONDS, WARM_SECONDS)
+        print(f"warm: the pipeline prewarm took over {WARM_TIMEOUT} s; left to the game", file=sys.stderr)
+    else:
+        if p.returncode:
+            print(f"warm: the pipeline prewarm failed (exit {p.returncode}, {game / 'logs/warm.log'}); left to the game",
+                  file=sys.stderr)  # fmt: skip
+    emit("progress", 1, 1)
 
 
 def load_state(game: Path) -> dict:

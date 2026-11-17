@@ -30,6 +30,7 @@ sys.path[:0] = [str(ROOT / "sm86/translate"), str(ROOT / "sm86/translate/fronten
 sys.path.insert(0, str(ROOT / "tools/shaders"))
 
 import glsl
+from glsl import int_hints
 from extract import sph_stage, trim
 from program import Decoder
 from shaderc_lib import Shaderc
@@ -99,6 +100,7 @@ def translate_one(
         return f"unsupported: {e}", ""
     except (KeyError, ValueError, IndexError) as e:  # a translator bug in one program must not stop the census
         return f"error: {type(e).__name__} {e}", ""
+    refl.update(int_hints.hints(src, stage, refl))  # integer inputs and outputs for the setup's prewarm
     cs_src = refl.pop("cs_glsl", None)
     gl, spv, res = Path(out, f"{key}.glsl"), Path(out, f"{key}.spv"), Path(out, f"{key}.result")
     if cs_src is not None:   # task/mesh as compute, for devices without mesh shaders

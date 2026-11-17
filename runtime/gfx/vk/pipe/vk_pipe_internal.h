@@ -251,3 +251,5 @@ void workers_drain(void);
 VkPipeline pipe_graphics(const VkPipeState *s, const VkPipeInfo **info, int async, int *pending, uint32_t wait_ms,
                            int low);
 void prebuild_start(void);
+// vk_pipe_pairs.c: the shader libraries of every program pair in pipeline-pairs.bin, at boot
+void pairs_prewarm(void);

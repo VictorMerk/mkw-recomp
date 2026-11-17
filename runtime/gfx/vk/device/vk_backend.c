@@ -278,7 +278,10 @@ static void held_wait(Held *h) {
 // +4.0 ms (means, +5.1 medians, scene balanced: rc1/rc1i, RX 6700 XT, 16/11/2026) against the replay thread left
 // unpinned. The others are every processor but those of that core (plat_cpu_core_of): taking the lower-numbered ones
 // assumed SMT siblings numbered together, which AMD's are not on Linux (0 and 16 on 16 cores), and left the game's
-// threads half the processors there. Applied at each present, on the replay thread.
+// threads half the processors there. A fast core is taken only when FAST_CORES_MIN fast processors are left besides
+// it: on a CPU with 4 P-cores and 4 E-cores (12 processors) it left the game's threads and the recording chunks 3
+// P-cores, and the game went from 30 fps in 0.1.12 (replay on the last E-core) to 18 (#497, RTX 3050 laptop, Linux);
+// there the last physical core is kept, as before. Applied at each present, on the replay thread.
 // MKW_FAST_CORES (default 1 on Linux with a hybrid CPU and FAST_CORES_MIN fast processors to spare, else 0; "ab"): the
 // frame's threads (the game's, the recording chunks, the recorder, the completion and shadow threads, the render
 // thread) on the fastest cores only (plat_cpu_fast), the replay core aside; background work (pipeline builds,
@@ -291,7 +294,8 @@ static void held_wait(Held *h) {
 // 6.3 means). By default only when at least FAST_CORES_MIN fast processors are left besides the replay core: 14 on that
 // i7, but 2 on an i5-1235U (2 P-cores), 3 on Lunar Lake (4 P-cores without SMT), 6 on a Ryzen AI 9 HX 370 (4 Zen 5
 // cores), where the game's ~95 threads and the recording would most likely lose more than the E-cores' slower clock
-// costs them. 8 is a hypothesis, not a measurement: no CPU with few P-cores was tried. Off on Windows until measured
+// costs them. 8 is a hypothesis, not a measurement: no CPU with few P-cores was tried. With the replay thread kept on
+// a slow core for want of fast ones (#497) it stays off: 0.1.12's split, the one measured there. Off on Windows until measured
 // there: its scheduler places threads by their activity, and its process mask would also hold the background threads.
 #define FAST_CORES_MIN 8
 static void replay_core(void) {
@@ -303,7 +307,15 @@ static void replay_core(void) {
         mode = rt_knob("REPLAY_CORE", cores >= 6 && __builtin_popcountll(all) > cores ? "1" : "0");
         fast = plat_cpu_fast() & all;
         if (mode && cores >= 2) {
-            uint64_t ff = fast & first, pick = ff ? ff : first;
+            uint64_t ff = fast & first, pick = first;
+            if (ff && ff != first) {   // a hybrid CPU: its fast cores, if enough are left for the frame's threads
+                int spare = __builtin_popcountll(fast & ~plat_cpu_core_of(63 - __builtin_clzll(ff)));
+                if (spare >= FAST_CORES_MIN) pick = ff;
+                else rt_log("vk: replay core: only %d fast processors would be left besides a fast one, %d needed: the "
+                            "last physical core instead (MKW_REPLAY_CORE)", spare, FAST_CORES_MIN);
+            } else if (ff) {
+                pick = ff;
+            }
             c = 63 - __builtin_clzll(pick);
             own = 1ull << c;
             rt_log("vk: the replay thread alone on processor %d (the last of %d %s cores), the others off its core%s "
@@ -317,7 +329,7 @@ static void replay_core(void) {
 #if defined(_WIN32)
             int def = 0;
 #else
-            int def = left >= FAST_CORES_MIN;
+            int def = left >= FAST_CORES_MIN && (!mode || own & fast);   // the replay core fast: enough to spare
 #endif
             fmode = rt_knob("FAST_CORES", def ? "1" : "0");
             if (fmode)

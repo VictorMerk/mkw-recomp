@@ -76,3 +76,6 @@ def shaders(exefs: Path, romfs: Path, game: Path, work: Path, glslc: str, jobs: 
             print(f"shaders: a worker ended abruptly, again with {jobs} workers", file=sys.stderr)
     for p in (game / "spirv").glob("*.glsl"):  # the runtime reads .spv and .res.json; the GLSL only made them
         p.unlink()
+    # every program pair of the copy, for the boot's shader library prewarm (runtime/gfx/vk/pipe/vk_pipe_pairs.c)
+    run([sys.executable, str(ROOT / "tools/shaders/pipeline_pairs.py"), "--shaders", str(sh),
+         "--out", str(game / "pipeline-pairs.bin")])  # fmt: skip
