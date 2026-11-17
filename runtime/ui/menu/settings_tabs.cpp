@@ -326,9 +326,9 @@ static void tab_graphics(float scale) {
         opt_choice_list("MKW_FPS", UI_MENU_FPS, vals, names, 5, UI_MENU_FPS_DESC);
     }
     {   // frames made between the game's (gfx/vk/device/vk_framegen.c), live
-        static const char *const vals[] = {"off", "auto", "2", "3", "4"};
-        const char *names[5] = {menu_text(UI_MENU_PERF_OFF), menu_text(UI_MENU_FPS_AUTO), "2x", "3x", "4x"};
-        opt_choice_list("MKW_FRAMEGEN", UI_MENU_FRAMEGEN, vals, names, 5, UI_MENU_FRAMEGEN_DESC);
+        static const char *const vals[] = {"off", "auto", "2", "3", "4", "120"};
+        const char *names[6] = {menu_text(UI_MENU_PERF_OFF), menu_text(UI_MENU_FPS_AUTO), "2x", "3x", "4x", "120 fps"};
+        opt_choice_list("MKW_FRAMEGEN", UI_MENU_FRAMEGEN, vals, names, 6, UI_MENU_FRAMEGEN_DESC);
         if (vk_fg_uneven()) opt_text(UI_MENU_FRAMEGEN_UNEVEN, true);   // a fixed factor that judders on this screen
     }
     opt_toggle("MKW_VRR", UI_MENU_VRR, UI_MENU_VRR_DESC);   // gfx/vk/device/vk_framegen.c fits, live

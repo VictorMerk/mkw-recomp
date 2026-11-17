@@ -30,10 +30,15 @@ int cfg_game_dir_invalid(void);
 // Not thread-safe: nothing else may call cfg_get meanwhile.
 int cfg_load(const char *path);
 
+// Reload one key from the selected installation's mkw.ini after a child process changed it (setup's ROMFS).
+// Other live/dirty keys and previously returned strings stay intact. The reloaded key is clean; the environment
+// still wins. 1 when found, 0 if the file or a nonempty value is missing (the old value stays). Call after cfg_init.
+int cfg_reload_key(const char *name);
+
 // Live settings (the in-game menu). cfg_set stores value as the mkw.ini value of name (MKW_ prefixed), marks it for
 // cfg_save and bumps cfg_version. cfg_get returns it unless the environment sets name. Any thread.
 void cfg_set(const char *name, const char *value);
-// Bumped by every cfg_set. A consumer that keeps a parsed value compares this with the number it last saw (one atomic
+// Bumped by every cfg_set and a changed reloaded value. A consumer that keeps a parsed value compares this with the number it last saw (one atomic
 // load) and parses again when it changed.
 unsigned cfg_version(void);
 // 1 when the environment sets name: cfg_set cannot change what cfg_get returns (the menu greys the setting out).

@@ -98,7 +98,7 @@ static const CfgMeta metas[] = {
     {"FULLSCREEN", "0", "0|1", LIVE}, {"WINDOW_SIZE", "1920x1080", NULL, LIVE},
     {"VK_PRESENT", "mailbox", "mailbox|fifo|immediate", LIVE}, {"GPU_INDEX", "", NULL, RESTART},
     {"PERF_OVERLAY", "off", "off|fps|full", LIVE}, {"FPS", "auto", "auto|game|60|30|20|15", LIVE}, {"LOW_LATENCY", "1", "0|1", LIVE},
-    {"FRAMEGEN", "off", "off|auto|2|3|4", LIVE},
+    {"FRAMEGEN", "off", "off|auto|2|3|4|120", LIVE},
     // the screen has variable refresh (FreeSync, G-Sync), told by the player: Vulkan does not say whether it is on.
     // Off, frame generation's Automatic uses only the factors that split the refreshes evenly (vk_framegen.c fits)
     {"VRR", "0", "0|1", LIVE},
@@ -185,10 +185,15 @@ static char *norm_key(char *key) {
     return strncmp(key, PREFIX, PREFIX_LEN) ? key : key + PREFIX_LEN;
 }
 
-static void add(char *key, char *value, int line) {
-    key = norm_key(key);
+static char *unquote(char *value) {
     size_t vl = strlen(value);
     if (vl >= 2 && value[0] == '"' && value[vl - 1] == '"') value[vl - 1] = 0, value++;
+    return value;
+}
+
+static void add(char *key, char *value, int line) {
+    key = norm_key(key);
+    value = unquote(value);
     if (!*key) return;
     if (!is_known(key)) rt_log("cfg: mkw.ini line %d: unknown key '%s'", line, key);
     if (!*value) return;   // "key =" leaves the setting at its default
@@ -202,8 +207,12 @@ static void add(char *key, char *value, int line) {
     entries[n_entries++] = (CfgEntry){strdup(key), strdup(value), 0, 0};
 }
 
-int cfg_load(const char *path) {
-    clear();
+static void load_entry(char *key, char *value, int line, void *ctx) {
+    (void)ctx;
+    add(key, value, line);
+}
+
+static int read_ini(const char *path, void (*visit)(char *, char *, int, void *), void *ctx) {
     uint64_t size = 0;
     uint8_t *data = plat_file_read(path, &size);
     if (!data) return 0;
@@ -218,13 +227,64 @@ int cfg_load(const char *path) {
             if (!eq) rt_log("cfg: mkw.ini line %d: no '=' in '%s'", line, s);
             else {
                 *eq = 0;
-                add(trim(s), trim(eq + 1), line);
+                visit(trim(s), trim(eq + 1), line, ctx);
             }
         }
         if (!eol) break;
         p = eol + 1;
     }
     free(data);
+    return 1;
+}
+
+int cfg_load(const char *path) {
+    clear();
+    return read_ini(path, load_entry, NULL);
+}
+
+typedef struct { const char *key; char *value; } ReloadKey;
+
+static void read_key(char *key, char *value, int line, void *ctx) {
+    (void)line;
+    ReloadKey *r = ctx;
+    value = unquote(value);
+    if (strcmp(norm_key(key), r->key) || !*value) return;
+    free(r->value);
+    r->value = strdup(value);   // as at startup, the last nonempty value wins
+}
+
+int cfg_reload_key(const char *name) {
+    char key[64], path[PLAT_PATH_MAX * 2];
+    if (snprintf(key, sizeof key, "%s", name) >= (int)sizeof key) return 0;
+    ReloadKey r = {norm_key(key), NULL};
+    if (!*r.key) return 0;
+    snprintf(path, sizeof path, "%s/mkw.ini", cfg_game_dir());
+    if (!read_ini(path, read_key, &r) || !r.value) {
+        rt_log("cfg: could not reload %s from %s; keeping its previous value", name, path);
+        return 0;
+    }
+    // Setup changed one key on disk. Keep other keys (including unsaved menu edits) and the strings already handed
+    // to readers; cfg_load would free those strings and discard all live settings. The reloaded key is already saved.
+    plat_mutex_lock(&set_lock);
+    int i = 0, n = n_entries;
+    while (i < n && strcmp(entries[i].key, r.key)) i++;
+    if (i == n && n == CFG_MAX_KEYS) {
+        plat_mutex_unlock(&set_lock);
+        free(r.value);
+        return 0;
+    }
+    if (i == n) {
+        entries[n] = (CfgEntry){strdup(r.key), r.value, 0, 0};
+        __atomic_store_n(&n_entries, n + 1, __ATOMIC_RELEASE);
+        __atomic_add_fetch(&version, 1, __ATOMIC_RELEASE);
+    } else {
+        if (!entries[i].value || strcmp(entries[i].value, r.value)) {
+            __atomic_store_n(&entries[i].value, r.value, __ATOMIC_RELEASE);
+            __atomic_add_fetch(&version, 1, __ATOMIC_RELEASE);
+        } else free(r.value);
+        entries[i].dirty = entries[i].removed = 0;
+    }
+    plat_mutex_unlock(&set_lock);
     return 1;
 }
 

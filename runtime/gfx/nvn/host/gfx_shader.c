@@ -602,6 +602,7 @@ const GfxShader *gfx_shader_load_input(const uint8_t iid[32]) {
 static struct { const uint8_t (*iids)[32]; const GfxShader **out; size_t n; volatile int64_t next, miss; } PW;
 
 static void prewarm_worker(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
     for (int64_t i; (i = plat_inc64(&PW.next) - 1) < (int64_t)PW.n;)
         if (!(PW.out[i] = gfx_shader_load_input(PW.iids[i]))) plat_inc64(&PW.miss);

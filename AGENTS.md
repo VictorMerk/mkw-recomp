@@ -20,6 +20,10 @@ folder has a README that names each file: read it before opening the code. The o
 - **No keys, no decryption.** Setup reads only an already decrypted dump (folders, `.nup`, `.nx`). Formats that need
   console keys to read (NSP, XCI, NCA, NSZ, XCZ) are not accepted, nor code that asks for keys, a keyset or a tool that
   decrypts with them (NSTool, hactool). Such pull requests are closed.
+- **No online services here.** Nothing that talks to or stands in for Nintendo's online services (NPLN, Gamesync,
+  friends, matchmaking, leaderboards, Pia relays), redirects their hostnames or swaps the game's TLS roots, and no
+  internet servers, relays or room systems: those belong in a separate project (e.g. MKWMP). Such pull requests are
+  closed. Local play and the game's LAN mode (`MKW_LAN`, also over a VPN) stay, as do generic hooks for outside projects.
 - **Licenses.** Copy code only from MIT-compatible projects, citing source and commit in the code and in
   [docs/project/research.md](docs/project/research.md#sources). From GPL projects (eden-nx2, oboromi, Eglantine) and unlicensed ones,
   ideas only.

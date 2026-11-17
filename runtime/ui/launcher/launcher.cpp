@@ -49,6 +49,7 @@
 #include "ui/launcher/launcher_players.h"
 #include "ui/launcher/launcher_setup.h"
 #include "ui/launcher/launcher_tools.h"
+#include "ui/launcher/launcher_finddumps.h"
 #include "ui/launcher/launcher_lastrun.h"
 #include "ui/launcher/launcher_update.h"
 #include "ui/launcher/mods.h"
@@ -698,8 +699,38 @@ static void state_line(bool ok, const char *text) {
     ImGui::TextColored(col4(ok ? LOOK_OK : LOOK_WARN), "%s", text);
 }
 
+// Where the game will read its files (main.c portable_paths, handed over by launcher_set_romfs and _exefs).
+static char g_romfs[PLAT_PATH_MAX * 2], g_exefs[PLAT_PATH_MAX * 2];
+
+// The game files the setup left that are not there now, or NULL: a RomFS package or folder (the "link" mode keeps the
+// player's own copy where it was) or the exefs/ folder. Issue #486: a Steam Deck whose package had gone from where the
+// setup found it booted from Play into a fatal error, and in Gaming Mode the game just closed. Checked at most once a
+// second, so a card or drive connected while the start screen is open is seen; the log says it when it changes, not on
+// every check.
+static const char *files_gone(void) {
+    static uint64_t at;
+    static const char *gone;
+    uint64_t now = SDL_GetTicks();
+    if (at && now - at < 1000) return gone;
+    at = now;
+    const char *was = gone;
+    gone = NULL;
+    if (!rt_game_present()) return gone;   // not set up: the files page says that already
+    if (g_romfs[0] && !plat_dir_exists(g_romfs) && !plat_file_exists(g_romfs)) gone = g_romfs;
+    else if (g_exefs[0] && !plat_dir_exists(g_exefs)) gone = g_exefs;
+    if (gone != was) {
+        if (gone) rt_log("launcher: the game files are not at %s", gone);
+        else rt_log("launcher: the game files are back");
+    }
+    return gone;
+}
+
 // The game files' state in words, with the version the last setup installed when it is known.
 static void files_state_text(bool ready, char *out, size_t cap) {
+    if (files_gone()) {
+        snprintf(out, cap, "%s", menu_text(UI_LAUNCH_FILES_GONE));
+        return;
+    }
     if (ready && L.game_version[0]) snprintf(out, cap, menu_text(UI_LAUNCH_FILES_READY_AS), L.game_version);
     else snprintf(out, cap, "%s", menu_text(ready ? UI_LAUNCH_FILES_READY : UI_LAUNCH_FILES_MISSING));
 }
@@ -732,7 +763,7 @@ static bool status_link(bool ready) {
 // (launcher_backdrop.cpp): the player's splash.png, or the logo's flag.
 static void page_main(float w, float h) {
     float s = L.scale, left = 96 * s, cw = 440 * s, edge = 56 * s, lh = ImGui::GetTextLineHeight();
-    bool files = rt_game_present(), ready = files && update_state().phase != UPDATE_FETCHING;
+    bool files = rt_game_present() && !files_gone(), ready = files && update_state().phase != UPDATE_FETCHING;
     // the column's height, to centre it: logo and title, the gap, Play, the controllers, the menu, the gap and Quit
     float mark = 84 * s, items = item_height(), gap = 12 * s;
     float play_h = fmaxf(52.0f, 76 * s), pad_h = fmaxf(36.0f, 48 * s);
@@ -1101,6 +1132,34 @@ static void game_dir_notes(void) {
     }
 }
 
+// The copies tools/prepare/finddumps.py found in the usual places (launcher_finddumps.h), one row each to pick with
+// a controller: in Steam's Gaming Mode the file dialogs above do not open. With no copy chosen yet the first of a
+// known version is (a .nup of a version the setup does not take would only fail it), else the first.
+static void found_copies(void) {
+    FoundDump f[FOUND_MAX];
+    int running = 0, n = finddumps_list(f, FOUND_MAX, &running);
+    if (!n) {
+        if (running) ImGui::TextColored(col4(LOOK_DIM), "%s", menu_text(UI_LAUNCH_FOUND_SEARCHING));
+        return;
+    }
+    if (!L.source[0]) {
+        int pick = 0;
+        while (pick < n && !strcmp(f[pick].version, "?")) pick++;
+        snprintf(L.source, sizeof L.source, "%s", f[pick < n ? pick : 0].path);
+    }
+    ImGui::Dummy(ImVec2(0, 4 * L.scale));
+    ImGui::TextColored(col4(LOOK_HEADING), "%s", menu_text(UI_LAUNCH_FOUND));
+    for (int i = 0; i < n; i++) {
+        const char *kind = !strcmp(f[i].kind, "folder") ? menu_text(UI_LAUNCH_FOUND_FOLDER)
+                         : !strcmp(f[i].kind, "nx")     ? ".nx"
+                                                        : ".nup";
+        char label[sizeof f[i].path + 96];
+        snprintf(label, sizeof label, "Mario Kart World %s  \xc2\xb7  %s  \xc2\xb7  %s##found%d", f[i].version, kind,
+                 f[i].path, i);
+        if (ImGui::Selectable(label, !strcmp(L.source, f[i].path))) snprintf(L.source, sizeof L.source, "%s", f[i].path);
+    }
+}
+
 // The setup's three steps: the player's copy, how its RomFS is kept, then Set up with the folder it installs to.
 static void setup_steps(const SetupState &st, bool ready, float act_h) {
     float s = L.scale;
@@ -1118,6 +1177,7 @@ static void setup_steps(const SetupState &st, bool ready, float act_h) {
         L.picking = 1;
         SDL_ShowOpenFileDialog(picked, nullptr, L.win, kPack, 1, nullptr, false);
     }
+    found_copies();
     step_end();
     step_head(2, false, menu_text(UI_LAUNCH_ROMFS_MODE));
     float cw = fminf((ImGui::GetContentRegionAvail().x - 12 * s) * 0.5f, 440 * s);
@@ -1209,7 +1269,14 @@ static void page_files(float w, float h) {
     ImGui::BeginDisabled(L.picking);
     char state[160];
     files_state_text(ready, state, sizeof state);
-    state_line(ready, state);
+    state_line(ready && !files_gone(), state);
+    if (const char *gone = ready ? files_gone() : nullptr) {   // where they were, and what brings them back
+        char help[PLAT_PATH_MAX * 2 + 400];
+        snprintf(help, sizeof help, menu_text(UI_LAUNCH_FILES_GONE_HELP), gone);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + fminf(ImGui::GetContentRegionAvail().x, 620 * L.scale));
+        ImGui::TextWrapped("%s", help);
+        ImGui::PopTextWrapPos();
+    }
     update_card(fminf(ImGui::GetContentRegionAvail().x, 620 * L.scale));   // a folder not set up starts on this page
     if (L.updated[0]) {
         char note[300];
@@ -1236,7 +1303,8 @@ static void page_files(float w, float h) {
         }
     } else if (ready) {
         ImGui::Dummy(ImVec2(0, 8 * L.scale));
-        if (st.running || st.finished) ImGui::SetNextItemOpen(true, ImGuiCond_Always);   // its steps stay in view
+        static bool open_test = getenv("MKW_LAUNCHER_SETUP_OPEN") != nullptr;   // (test) unfolded, for a shot
+        if (st.running || st.finished || open_test) ImGui::SetNextItemOpen(true, ImGuiCond_Always);   // its steps stay in view
         if (ImGui::CollapsingHeader(menu_text(UI_LAUNCH_SETUP_AGAIN))) {
             ImGui::TextColored(col4(LOOK_HEADING), "%s", menu_text(UI_LAUNCH_SETUP_AGAIN_HINT));
             ImGui::Dummy(ImVec2(0, 6 * L.scale));
@@ -1774,9 +1842,24 @@ static void save_shot(const char *suffix) {
     SDL_DestroySurface(s);
 }
 
-extern "C" void launcher_set_romfs(const char *romfs) { mods_set_romfs(romfs); }
-extern "C" void launcher_set_exefs(const char *exefs) { mods_set_exefs(exefs); }
+extern "C" void launcher_set_romfs(const char *romfs) {
+    snprintf(g_romfs, sizeof g_romfs, "%s", romfs);
+    mods_set_romfs(romfs);
+}
+extern "C" void launcher_set_exefs(const char *exefs) {
+    snprintf(g_exefs, sizeof g_exefs, "%s", exefs);
+    mods_set_exefs(exefs);
+}
 extern "C" void launcher_set_profile(const char *profile) { launcher_players_set_base(profile); }
+
+static void setup_paths_finished(const SetupState *state) {
+    static unsigned seen;
+    if (!state->finished || seen == state->generation) return;
+    seen = state->generation;
+    // prepare.py wrote the linked package/folder (or "romfs" for a copy) into mkw.ini in another process. Play
+    // reexecs and sees it, but without this refresh the Mods page kept startup's missing or previous RomFS.
+    if (state->finished > 0 && cfg_reload_key("MKW_ROMFS")) launcher_refresh_romfs();
+}
 
 extern "C" void launcher_gb_install(const char *url) {
     const char *p = !strncmp(url, "mkw-recomp:", 11) ? url + 11 : url;
@@ -1833,7 +1916,8 @@ static int start_screen_asked(void) {
 
 // MKW_START_SCREEN (General tab): auto skips the start screen when Steam's Big Picture or Gaming Mode started the game,
 // as a console starts a game from its own menu (a controller-only player on Bazzite or a Steam Deck), skip always,
-// always never. It opens anyway when it has something to do or say: the game files not set up, a setup to
+// always never. It opens anyway when it has something to do or say: the game files not set up or gone from where the
+// setup left them (issue #486: a Steam Deck in Gaming Mode whose .nup was not there any more), a setup to
 // run again after an update, a code mod to build, the last run's fatal error, or View / Select held at start. Skipped,
 // it does what Play does (the mods merged, the player's profile) and the game starts.
 static int console_start(int updated, int other) {
@@ -1844,6 +1928,7 @@ static int console_start(int updated, int other) {
     char state[PLAT_PATH_MAX * 3];
     snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
     const char *why = !rt_game_present()                                   ? "the game files are not set up"
+                    : files_gone()                                         ? "the game files are not where the setup left them"
                     : updated || other                                     ? "the game files are to be set up again"
                     : mods_code_changed() && plat_file_exists(state)       ? "a code mod is to be built"
                     : last_run_fatal()                                     ? "the last run ended in an error"
@@ -1892,7 +1977,7 @@ extern "C" int launcher_run(void) {
         }
     }
     L.tools = setup_available(L.exe_dir);
-    if (!rt_game_present() && !L.shot_at) L.page = PAGE_FILES;
+    if ((!rt_game_present() || files_gone()) && !L.shot_at) L.page = PAGE_FILES;
     pads_refresh();
     char state[PLAT_PATH_MAX * 3];
     snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
@@ -1915,6 +2000,8 @@ extern "C" int launcher_run(void) {
         update_check_start(L.exe_dir);
     }
     if (!L.shot_at || getenv("MKW_LAUNCHER_LASTRUN")) lastrun_start(L.exe_dir, cfg_game_dir());
+    // MKW_LAUNCHER_FIND=1 (test): the search in a shot too, as at a plain start
+    if (L.tools && (!L.shot_at || getenv("MKW_LAUNCHER_FIND"))) finddumps_start(L.exe_dir, cfg_game_dir());
     if (getenv("MKW_LAUNCHER_SHORTCUT")) make_shortcut();   // (test) as the button does
     if (const char *t = getenv("MKW_LAUNCHER_SETUP")) {   // (test) the setup started from that folder, as Set up does
         snprintf(L.source, sizeof L.source, "%s", t);
@@ -1926,9 +2013,11 @@ extern "C" int launcher_run(void) {
     rt_log("launcher: start screen, game files %s, setup tools %s", rt_game_present() ? "ready" : "not set up",
            L.tools ? "present" : "missing");
     for (long frame = 1; L.result < 0; frame++) {
-        if (L.play_after_setup && setup_state().finished) {   // the code mods' build ended: play if it went well
+        SetupState setup = setup_state();
+        setup_paths_finished(&setup);   // before the code-mod merge below, or a new import from this frame's input
+        if (L.play_after_setup && setup.finished) {   // the same snapshot: a new completion must refresh paths first
             L.play_after_setup = 0;
-            if (setup_state().finished > 0) {
+            if (setup.finished > 0) {
                 mods_code_built();
                 mods_merge_sync(L.exe_dir);
                 char player[PLAT_PATH_MAX * 2];

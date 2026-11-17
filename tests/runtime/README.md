@@ -13,6 +13,7 @@ Pieces of `runtime/` built alone: audio, controllers, memory caps, settings and 
 | `test_defaults.py` | The memory caps a player gets with nothing set (`runtime/gfx/vk/device/vk_defaults.c`), built alone and checked on the GPUs players reported: the Radeon 660M keeps its measured caps, a large discrete GPU is not held to them (issue #31) |
 | `test_audio_update.py` | The actual audren RequestUpdate parser (`runtime/audio/audren.c`, its section cut out and built alone) with synthetic REV11/REV15 records: zeroed unused slots cannot reset playing voice 0, freed slots stop, reused slots reset and output status stays with its slot |
 | `test_adpcm.py` | DSP-ADPCM voices (`runtime/audio/audio_mixer.c`, its voice decoding cut out and built alone) against an exact decode of random buffers (`t_adpcm.c`): with a context on every buffer, loops included, the output is the exact decode; without contexts at most a few samples differ (a slot refilled before the walk decoded its last samples); high pitch and sample rate cross more than 128 input samples at once; each sample is decoded about once (#331) |
+| `test_framegen.py` | Frame generation's factor (`runtime/gfx/vk/device/vk_framegen.c`, its selector cut out and built alone with the display stubbed): the 120 fps target (60 x2, 30 x4) on 60-240 Hz and fractional refreshes, the swapchain's room, the uneven-refresh note with and without VRR, movies and turbo, and the existing Automatic and fixed factors |
 
 C sources the tests here build with the compiler at hand and run:
 

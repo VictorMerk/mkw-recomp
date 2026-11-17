@@ -2677,6 +2677,7 @@ msgctxt "UI_SETUP_ERR_SPACE"
 msgid ""
 "not enough free space: the setup needs %s. Free some space, or choose \"Use it where it is\" for "
 "the RomFS, which needs no copy"
+msgstr ""
 
 msgctxt "UI_MENU_START_SCREEN"
 msgid "Start screen"
@@ -2695,4 +2696,27 @@ msgstr ""
 
 msgctxt "UI_MENU_START_SKIP"
 msgid "Skip"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
 msgstr ""

@@ -148,6 +148,7 @@ static void prebuild_report(void) {
 }
 
 static void pipe_worker(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     int me = (int)(intptr_t)arg;
     plat_mutex_lock(&P.lock);
     for (;;) {
@@ -610,6 +611,7 @@ static int id_cmp(const void *x, const void *y) { return memcmp(x, y, 32); }
 
 // Builds queued prebuild jobs until the low queue is empty, beside the pipe_worker pool (same bookkeeping).
 static void warm_builder(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
     plat_mutex_lock(&P.lock);
     while (A.low) {

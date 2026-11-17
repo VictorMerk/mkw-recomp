@@ -279,29 +279,62 @@ static void held_wait(Held *h) {
 // unpinned. The others are every processor but those of that core (plat_cpu_core_of): taking the lower-numbered ones
 // assumed SMT siblings numbered together, which AMD's are not on Linux (0 and 16 on 16 cores), and left the game's
 // threads half the processors there. Applied at each present, on the replay thread.
+// MKW_FAST_CORES (default 1 on Linux with a hybrid CPU and FAST_CORES_MIN fast processors to spare, else 0; "ab"): the
+// frame's threads (the game's, the recording chunks, the recorder, the completion and shadow threads, the render
+// thread) on the fastest cores only (plat_cpu_fast), the replay core aside; background work (pipeline builds,
+// prewarming, video decoding: plat_thread_background) keeps every processor. On an i7-14700F (8 P-cores, 12 E-cores; RX
+// 6700 XT, RADV with the clock held at peak by MKW_GPU_CLOCKS, game 1.8.0 at 1280x720, race at a fixed 60 fps, no GPU
+// memory cap; fc-gc2 and its inverted twin, 17/11/2026) every window with it ran at the 16.67 ms cap, against 12 of 34
+// over 17.5 ms without it; the slowest frame of a 60-frame window 20.0 ms against 26.7 (means), the replay thread's
+// recording -1.6 ms, the frame -0.68 ms (means, scene balanced; -0.16 medians, most windows being at the cap both
+// ways). Before the clock was held (fc-ab1/fc-ab2 and twins, 16/11) the frame was ~20 ms and took 3.9 ms less (medians;
+// 6.3 means). By default only when at least FAST_CORES_MIN fast processors are left besides the replay core: 14 on that
+// i7, but 2 on an i5-1235U (2 P-cores), 3 on Lunar Lake (4 P-cores without SMT), 6 on a Ryzen AI 9 HX 370 (4 Zen 5
+// cores), where the game's ~95 threads and the recording would most likely lose more than the E-cores' slower clock
+// costs them. 8 is a hypothesis, not a measurement: no CPU with few P-cores was tried. Off on Windows until measured
+// there: its scheduler places threads by their activity, and its process mask would also hold the background threads.
+#define FAST_CORES_MIN 8
 static void replay_core(void) {
-    static int mode = -1, applied = 0;
-    static uint64_t all, own, others;
+    static int mode = -1, fmode = 0, applied = 0, c = -1;
+    static uint64_t all, own, fast;
     if (mode < 0) {
         uint64_t first;
         int cores = plat_cpu_cores(&all, &first);
         mode = rt_knob("REPLAY_CORE", cores >= 6 && __builtin_popcountll(all) > cores ? "1" : "0");
+        fast = plat_cpu_fast() & all;
         if (mode && cores >= 2) {
-            uint64_t fast = plat_cpu_fast() & first, pick = fast ? fast : first;
-            int c = 63 - __builtin_clzll(pick);
-            own = 1ull << c, others = all & ~plat_cpu_core_of(c);
-            rt_log("vk: the replay thread alone on processor %d (the last of %d %s cores), the others on %#llx%s "
+            uint64_t ff = fast & first, pick = ff ? ff : first;
+            c = 63 - __builtin_clzll(pick);
+            own = 1ull << c;
+            rt_log("vk: the replay thread alone on processor %d (the last of %d %s cores), the others off its core%s "
                    "(MKW_REPLAY_CORE)", c, __builtin_popcountll(pick), pick == first ? "physical" : "fastest",
-                   (unsigned long long)others, mode == 2 ? " in the B blocks" : "");
+                   mode == 2 ? " in the B blocks" : "");
         } else {
             mode = 0;
         }
+        if (fast && fast != all) {
+            int left = __builtin_popcountll(mode ? fast & ~plat_cpu_core_of(c) : fast);
+#if defined(_WIN32)
+            int def = 0;
+#else
+            int def = left >= FAST_CORES_MIN;
+#endif
+            fmode = rt_knob("FAST_CORES", def ? "1" : "0");
+            if (fmode)
+                rt_log("vk: the frame's threads on %d fast processors (%#llx, the replay core's aside), background "
+                       "work on all %d (MKW_FAST_CORES%s)", left, (unsigned long long)fast,
+                       __builtin_popcountll(all), fmode == 2 ? ", in the B blocks" : "");
+            else if (left < FAST_CORES_MIN)
+                rt_log("vk: the frame's threads on every processor: only %d fast ones besides the replay core, the "
+                       "default needs %d (MKW_FAST_CORES=1 forces it)", left, FAST_CORES_MIN);
+        }
     }
-    int on = RT_KNOB_ON(mode);
-    if (on == applied) return;
-    applied = on;
-    plat_process_affinity(on ? others : all);
-    plat_thread_affinity(NULL, on ? own : all);
+    int on = RT_KNOB_ON(mode), fon = fmode ? RT_KNOB_ON(fmode) : 0, state = on | fon << 1;
+    if (state == applied) return;
+    applied = state;
+    uint64_t base = fon ? fast : all, others = on ? base & ~plat_cpu_core_of(c) : base;
+    plat_process_affinity(others);
+    plat_thread_affinity(NULL, on ? own : base);
 }
 
 // MKW_REPLAY_DELAY_US (a measurement, default 0): the replay thread waits that long before each

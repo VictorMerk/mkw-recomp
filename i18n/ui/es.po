@@ -2713,3 +2713,29 @@ msgstr "Siempre"
 msgctxt "UI_MENU_START_SKIP"
 msgid "Skip"
 msgstr "Omitir"
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr "No se encuentran los ficheros del juego"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+"La preparación dejó los ficheros del juego en %s y ya no están ahí. Si están en una tarjeta o un "
+"disco, conéctalo; si los has movido, prepara el juego de nuevo aquí abajo y elige dónde están "
+"ahora."
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr "Encontradas en este equipo"
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr "Buscando tu copia en los sitios habituales..."
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
+msgstr "carpeta"

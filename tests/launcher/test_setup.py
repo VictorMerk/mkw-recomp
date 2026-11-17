@@ -100,6 +100,68 @@ def test_versions() -> None:
     assert update.version_key("dev") is None
 
 
+@pytest.mark.parametrize("os_name", ["linux", "linux-aarch64", "windows"])
+@pytest.mark.parametrize("damage", ["none", "size", "digest"])
+def test_fetch_update_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], os_name: str, damage: str
+) -> None:
+    """Both Linux architectures stage an executable AppImage; only Windows extracts a ZIP, after integrity checks."""
+    import hashlib
+    import zipfile
+
+    payload = b"synthetic update payload; never executed\n"
+    source = tmp_path / "download"
+    if os_name == "windows":
+        with zipfile.ZipFile(source, "w") as archive:
+            archive.writestr("mkw-recomp/mkw.exe", payload)
+    else:
+        source.write_bytes(payload)
+    data = source.read_bytes()
+    asset = {
+        "name": "mkw-recomp-v9.8.7" + update.ASSET_SUFFIX[os_name],
+        "size": len(data) + (damage == "size"),
+        "digest": "sha256:" + ("0" * 64 if damage == "digest" else hashlib.sha256(data).hexdigest()),
+        "browser_download_url": source.as_uri(),
+    }
+    metadata = tmp_path / "release.json"
+    metadata.write_text(json.dumps({
+        "tag_name": "v9.8.7", "draft": False, "prerelease": False,
+        "assets": [dict(asset, name="mkw-recomp-v9.8.7" + suffix) for suffix in update.ASSET_SUFFIX.values()],
+    }))
+    real_get = update.get
+
+    def local_get(url: str, timeout: int):
+        # Redirect only the release API to a local JSON file; selection, reads and staging use production code.
+        if url == f"https://api.github.com/repos/{update.REPO}/releases/latest":
+            url = metadata.as_uri()
+        else:
+            assert url == source.as_uri(), f"unexpected network request: {url}"
+        return real_get(url, timeout)
+
+    monkeypatch.setattr(update, "get", local_get)
+    dest = (tmp_path / ODD).resolve()
+    monkeypatch.setattr(sys, "argv", ["update.py", "fetch", "--os", os_name, "--tag", "v9.8.7", "--dest", str(dest)])
+    part = dest / (asset["name"] + ".part")
+    if damage != "none":
+        with pytest.raises(SystemExit) as exited:
+            update.main()
+        assert exited.value.code == 1
+        assert not part.exists() and not list(dest.iterdir())
+        output = capsys.readouterr()
+        assert "error fetch " in output.out and "came damaged" in output.out and "ready " not in output.out
+        assert not output.err
+        return
+    update.main()
+    out = dest / "new/mkw-recomp/mkw.exe" if os_name == "windows" else dest / asset["name"]
+    assert out.read_bytes() == payload and not part.exists()
+    ready = out.parent if os_name == "windows" else out
+    assert f"ready {ready}\n" in capsys.readouterr().out
+    if os_name != "windows":
+        assert not (dest / "new").exists()
+        if os.name != "nt":
+            assert out.stat().st_mode & 0o777 == 0o755
+
+
 def test_romfs_version_matches_main() -> None:
     # #315: 1.0.0's exefs/main with 1.8.0's RomFS passed the file count and crashed while warming up
     import versions
