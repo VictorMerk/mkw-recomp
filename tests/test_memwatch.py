@@ -105,6 +105,7 @@ class MemoryWatchTests(unittest.TestCase):
         rows = self.rows()
         self.assertEqual(len(rows), 12)
         private = [int(row["private_bytes"]) for row in rows]
+        self.assertTrue(all(value > 0 for value in private), private)
         self.assertGreater(max(private) - min(private[:2]), 48 * 1024 * 1024)
         self.assertTrue(all(row["gpu_dedicated_bytes"] == "" for row in rows))
         ticks = [int(row["qpc_ticks"]) for row in rows]

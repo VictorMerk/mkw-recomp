@@ -26,6 +26,22 @@ public static class MkwMemwatchNative {
     [DllImport("kernel32.dll", SetLastError=true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalMemoryStatusEx(ref Status status);
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ProcessMemory {
+        public uint size, pageFaults;
+        public UIntPtr peakWorkingSet, workingSet, quotaPeakPagedPool, quotaPagedPool;
+        public UIntPtr quotaPeakNonPagedPool, quotaNonPagedPool, pagefile, peakPagefile, privateUsage;
+    }
+    [DllImport("psapi.dll", SetLastError=true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetProcessMemoryInfo(IntPtr process, ref ProcessMemory counters, uint size);
+    public static ProcessMemory ReadProcess(IntPtr process) {
+        ProcessMemory counters = new ProcessMemory();
+        counters.size = (uint)Marshal.SizeOf(typeof(ProcessMemory));
+        if (!GetProcessMemoryInfo(process, ref counters, counters.size))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        return counters;
+    }
     public static Status Read() {
         Status status = new Status();
         status.length = (uint)Marshal.SizeOf(typeof(Status));
@@ -61,8 +77,11 @@ try{
             if($target.HasExited -or $target.StartTime.ToUniversalTime().Ticks -ne $started.Ticks){break}
             $utc=[DateTime]::UtcNow
             $qpc=[Diagnostics.Stopwatch]::GetTimestamp()
-            $privateBytes=$target.PrivateMemorySize64
-            $workingBytes=$target.WorkingSet64
+            # Read the target's live counters directly. System.Diagnostics' process snapshot can report zeros on
+            # Windows runners even while the owned target has committed and touched a known allocation.
+            $memory=[MkwMemwatchNative]::ReadProcess($target.Handle)
+            $privateBytes=$memory.privateUsage.ToUInt64()
+            $workingBytes=$memory.workingSet.ToUInt64()
             $virtualBytes=$target.VirtualMemorySize64
             $cpuSeconds=$target.TotalProcessorTime.TotalSeconds
             $handles=$target.HandleCount
