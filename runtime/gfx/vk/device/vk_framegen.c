@@ -209,8 +209,9 @@ static int ensure_images(VkCtx *c, int w, int h) {
              make_img(c, &F.lf[i], (uint32_t)w, (uint32_t)h, VK_FORMAT_R16_SFLOAT, 0) &&
              make_img(c, &F.lq[i], qw, qh, VK_FORMAT_R16_SFLOAT, 0) &&
              make_img(c, &F.le[i], gw, gh, VK_FORMAT_R16_SFLOAT, 0);
+    // --probe-framegen reads all six grids back; its image-to-buffer copies require TRANSFER_SRC usage.
     for (int i = 0; i < 6; i++)   // (the coarse level's two: one vector per 2x2 of the others)
-        ok = ok && make_img(c, &F.fl[i], i < 2 ? (gw + 1) / 2 : gw, i < 2 ? (gh + 1) / 2 : gh, VK_FORMAT_R16G16_SFLOAT, 0);
+        ok = ok && make_img(c, &F.fl[i], i < 2 ? (gw + 1) / 2 : gw, i < 2 ? (gh + 1) / 2 : gh, VK_FORMAT_R16G16_SFLOAT, XS);
     for (int i = 0; i < VK_FG_MAX - 1; i++)
         ok = ok && make_img(c, &F.made[i], (uint32_t)w, (uint32_t)h, VK_FORMAT_R8G8B8A8_UNORM, XS);
     if (!ok) {
