@@ -1,5 +1,6 @@
 // Host input sampling (runtime/input.c, with input_sdl.c): SDL3 gamepad and the keyboard as one Switch npad.
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 
 // Bits of libnx HidNpadButton (A=0 B=1 X=2 Y=3 StickL=4 StickR=5 L=6 R=7 ZL=8 ZR=9 Plus=10 Minus=11 Left=12 Up=13 Right=14
@@ -61,6 +62,25 @@ int input_hack_key(int which);
 // window change, (0) captures it again once the client area has its new size.
 void input_cursor_suspend(int on);
 int input_cursor_released(void);   // Esc or a non-client activation released the cursor (probe)
+
+// Battery of the player's gamepad (index 0-7; input_power.c). state INPUT_POWER_*; percent 0-100, -1 when the gamepad
+// gives none; coarse: percent is a band's (a Switch 2 controller over Bluetooth gives a voltage: 10 low, 50 medium,
+// 90 high). Returns state. Any thread.
+enum { INPUT_POWER_NONE, INPUT_POWER_UNKNOWN, INPUT_POWER_BATTERY, INPUT_POWER_CHARGING, INPUT_POWER_CHARGED,
+       INPUT_POWER_WIRED };
+typedef struct { int state, percent, coarse; char name[64]; } InputPower;
+int input_pad_power(int player, InputPower *out);
+// The same from what SDL says of a gamepad (SDL_GetGamepadPowerInfo's state and percent, its joystick id): the start
+// screen, which reads the gamepads without input.c. Keeps out->name.
+int input_power_from_sdl(int sdl_state, int percent, uint32_t sdl_id, InputPower *out);
+// The battery as the player reads it, in the menu language: "80 %", "Charging, 80 %", "Low"... (out holds 64 bytes).
+const char *input_power_text(const InputPower *p, char *out, int out_size);
+// input_power.c's watch (started with the gamepads): a notice when a player's battery runs low, once per discharge.
+void input_power_start(void);
+// The game's gamepad input is up (SDL gamepads opened by input.c): not on the start screen, which reads SDL itself.
+int input_gamepads_running(void);
+// input.c, for input_power.c: SDL's SDL_PowerState of the player's gamepad (-2 none), its name, joystick id and percent.
+int input_pad_power_sdl(int player, char *name, size_t name_size, uint32_t *id, int *percent);
 
 // Rumble: SDL_RumbleGamepad on the player's gamepad (index 0-7), low (heavy, left) and high (light, right) motor
 // 0..65535 for ms milliseconds. 1 if a gamepad with rumble took it. Callable from any thread.

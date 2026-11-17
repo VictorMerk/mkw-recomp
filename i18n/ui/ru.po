@@ -887,6 +887,61 @@ msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr "Игроков: %d, каждому нужен контроллер; подключено: %d. Клавиатура — только для игрока 1."
 
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Геймпады"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "Игрок %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"Заряд геймпада каждого игрока, как его сообщает геймпад. Некоторые геймпады его не сообщают. "
+"Геймпад Switch 2 по Bluetooth сообщает напряжение, оно показано как высокий, средний или низкий "
+"заряд."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Геймпад не подключён"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Низкий"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Средний"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Высокий"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "Заряжается"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Заряжен"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Проводной"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Заряд неизвестен"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "У геймпада игрока %d заканчивается заряд (%s)"
+
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
 msgstr "Сбросить все кнопки"

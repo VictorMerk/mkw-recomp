@@ -150,7 +150,7 @@ struct RowView {
 
 // One row: draws it, handles A / click and left / right while selected. Returns 2 (A / click), -1 / +1 (left / right) or
 // 0; always 0 for a row the environment fixes (greyed out, still selectable so its description shows).
-static int row(const char *key, UiTextId label, UiTextId desc, const RowView &v) {
+static int row_text(const char *key, const char *label, UiTextId desc, const RowView &v) {
     const CfgMeta *m = cfg_meta(key);
     const char *disabled = g_disable_next ? menu_text(g_disable_note) : NULL;
     g_disable_next = false;
@@ -235,7 +235,7 @@ static int row(const char *key, UiTextId label, UiTextId desc, const RowView &v)
     }
     // the label and its note, clipped before the value
     ImVec4 clip(p.x, p.y, value_left - fs * 0.6f, p.y + h);
-    dl->AddText(font, fs, ImVec2(p.x + pad, ty), off ? g_look->off : g_look->label, menu_text(label), NULL, 0,
+    dl->AddText(font, fs, ImVec2(p.x + pad, ty), off ? g_look->off : g_look->label, label, NULL, 0,
                 &clip);
     const char *note = disabled                          ? disabled
                      : off                               ? menu_text(UI_MENU_SET_BY_ENV)
@@ -243,7 +243,7 @@ static int row(const char *key, UiTextId label, UiTextId desc, const RowView &v)
                                                          : NULL;
     if (note) dl->AddText(font, small, ImVec2(p.x + pad, ny), off ? g_look->note_off : g_look->dim, note);
     if (g_look->quiet && !off && v.value[0] && !v.is_default) {   // changed from the default: a dot after the label
-        float dx = p.x + pad + ImGui::CalcTextSize(menu_text(label)).x + fs * 0.5f, dr = fs * 0.14f;
+        float dx = p.x + pad + ImGui::CalcTextSize(label).x + fs * 0.5f, dr = fs * 0.14f;
         if (dx + dr < value_left - fs * 0.6f) dl->AddCircleFilled(ImVec2(dx, ty + fs * 0.55f), dr, g_look->changed, 12);
     }
     if (g_indent) ImGui::Unindent(24 * g_scale);
@@ -279,6 +279,10 @@ int opt_save_tick(int force) {
 
 // ---- rows
 
+static int row(const char *key, UiTextId label, UiTextId desc, const RowView &v) {
+    return row_text(key, menu_text(label), desc, v);
+}
+
 bool opt_toggle(const char *key, UiTextId label, UiTextId desc, bool inverted) {
     const CfgMeta *m = cfg_meta(key);
     bool set = cfg_bool(key) != 0, def = m && strcmp(m->def, "0") != 0;
@@ -287,6 +291,11 @@ bool opt_toggle(const char *key, UiTextId label, UiTextId desc, bool inverted) {
     if (!row(key, label, desc, v)) return false;   // any step flips it
     apply(key, set ? "0" : "1");
     return true;
+}
+
+void opt_info(const char *id, const char *label, const char *value, UiTextId desc, const char *note) {
+    RowView v = {value ? value : "", false, false, note};
+    row_text(id, label, desc, v);
 }
 
 bool opt_button(const char *id, UiTextId label, UiTextId desc, const char *value) {

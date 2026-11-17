@@ -888,6 +888,60 @@ msgid "%d players need a controller each: %d connected. The keyboard only counts
 msgstr ""
 "%d oyuncunun her biri için bir kumanda gerekir: %d bağlı. Klavye yalnızca 1. oyuncu için sayılır."
 
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Kumandalar"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "Oyuncu %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"Her oyuncunun kumandasının pili, kumandanın bildirdiği gibi. Bazı kumandalar bildirmez. Bluetooth "
+"ile bağlı bir Switch 2 kumandası bir voltaj bildirir; yüksek, orta veya düşük olarak gösterilir."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Kumanda bağlı değil"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Düşük"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Orta"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Yüksek"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "Şarj oluyor"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Şarj oldu"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Kablolu"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Pil bilgisi yok"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "Oyuncu %d kumandasının pili bitmek üzere (%s)"
+
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
 msgstr "Tüm tuşları sıfırla"

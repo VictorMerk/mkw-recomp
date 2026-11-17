@@ -92,6 +92,13 @@ typedef enum {
     UI_BINDS_TAKEN,           // "%s was taken from %s": the key, the action that lost it
     UI_BINDS_SWAPPED,         // "%s swapped with %s": the two actions
     UI_NOTICE_PADS_MISSING,   // "%d players need a controller each: %d connected" (ov_input.c, controller applet)
+    // Controller batteries (input/input_power.c): the Controls tab's rows, the start screen and the low battery notice
+    UI_MENU_PADS,             // group heading over the players' rows
+    UI_MENU_PAD_PLAYER,       // "Player %d: %s": the player and the controller's name
+    UI_MENU_PAD_BATTERY_DESC, UI_MENU_PADS_NONE,
+    UI_POWER_LOW, UI_POWER_MEDIUM, UI_POWER_HIGH,   // a Switch 2 controller's band over Bluetooth
+    UI_POWER_CHARGING, UI_POWER_CHARGED, UI_POWER_WIRED, UI_POWER_UNKNOWN,
+    UI_NOTICE_BATTERY_LOW,    // "Player %d's controller is running out of battery (%s)"
     UI_BINDS_RESET, UI_BINDS_RESET_DESC,
     // the actions, in action order (input_map.h B_A .. B_SR_DOWN)
     UI_BIND_A, UI_BIND_B, UI_BIND_X, UI_BIND_Y, UI_BIND_LCLICK, UI_BIND_RCLICK, UI_BIND_L, UI_BIND_R, UI_BIND_ZL,

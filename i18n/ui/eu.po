@@ -896,6 +896,61 @@ msgstr ""
 "Jokalariak: %d, bakoitzak agintea behar du; konektatuta: %d. Teklatuak 1. jokalarirako bakarrik "
 "balio du."
 
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Mandoak"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "%d. jokalaria: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"Jokalari bakoitzaren mandoaren bateria, mandoak adierazten duen bezala. Mando batzuek ez dute "
+"adierazten. Bluetooth bidezko Switch 2 mando batek tentsioa adierazten du, altua, ertaina edo "
+"baxua gisa erakutsita."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Ez dago mandurik konektatuta"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Baxua"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Ertaina"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Altua"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "Kargatzen"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Kargatuta"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Kable bidez"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Bateria ez da adierazi"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "%d. jokalariaren mandoari bateria agortzen ari zaio (%s)"
+
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
 msgstr "Berrezarri botoi guztiak"

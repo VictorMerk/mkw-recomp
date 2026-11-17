@@ -61,6 +61,7 @@
 extern "C" {
 #include "cfg.h"
 #include "gamelib.h"
+#include "input.h"
 #include "platform/platform.h"
 #include "sysinfo.h"
 #include "ui_text.h"
@@ -102,6 +103,7 @@ static struct {
     char game_version[32], setup_port[48], setup_source[1024], setup_mode[8];
     int pads;                       // the gamepads SDL sees, and the first one's name (pads_refresh)
     char pad_name[128];
+    SDL_Gamepad *pad_open[8];       // the first eight, open for their batteries (input_power_from_sdl)
     char updated[96];               // the release the previous run installed (launcher_update.h)
     int relaunch;                   // an update is in place: start the new program when the window is gone
     double intro_t0;                // when the main page was first shown (its intro, once a run); 0 not yet
@@ -183,7 +185,24 @@ static void pads_refresh(void) {
     const char *name = ids && n > 0 ? SDL_GetGamepadNameForID(ids[0]) : nullptr;
     L.pads = ids ? n : 0;
     snprintf(L.pad_name, sizeof L.pad_name, "%s", name ? name : "");
+    for (SDL_Gamepad *&g : L.pad_open)
+        if (g) SDL_CloseGamepad(g), g = nullptr;
+    for (int i = 0; i < L.pads && i < (int)(sizeof L.pad_open / sizeof *L.pad_open); i++) L.pad_open[i] = SDL_OpenGamepad(ids[i]);
     SDL_free(ids);
+}
+
+// The battery of the i-th gamepad SDL sees, as pad_row shows it (input_power_text); its name in w->name.
+static bool pad_power(int i, InputPower *w, char *text, int size) {
+    *w = InputPower{INPUT_POWER_NONE, -1, 0, ""};
+    SDL_Gamepad *g = i < (int)(sizeof L.pad_open / sizeof *L.pad_open) ? L.pad_open[i] : nullptr;
+    if (!g) return false;
+    const char *n = SDL_GetGamepadName(g);
+    snprintf(w->name, sizeof w->name, "%s", n ? n : "");
+    int pct = -1;
+    SDL_PowerState st = SDL_GetGamepadPowerInfo(g, &pct);
+    input_power_from_sdl(st, pct, SDL_GetGamepadID(g), w);
+    input_power_text(w, text, size);
+    return true;
 }
 
 // The GitHub repository the releases and the issues are in: MKW_UPDATE_REPO (tests, forks), else upstream's.
@@ -357,7 +376,18 @@ static bool pad_row(float w, float hgt) {
     char text[200];
     if (L.pads > 0) {
         int n = snprintf(text, sizeof text, menu_text(UI_LAUNCH_PAD), L.pad_name);
+        InputPower w;
+        char power[64];
+        // its battery when it gives one (discussion #516); hovered, every controller's
+        if (pad_power(0, &w, power, sizeof power) && w.state != INPUT_POWER_UNKNOWN && n > 0 && n < (int)sizeof text)
+            n += snprintf(text + n, sizeof text - n, " · %s", power);
         if (L.pads > 1 && n > 0 && n < (int)sizeof text) snprintf(text + n, sizeof text - n, " +%d", L.pads - 1);
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            for (int i = 0; pad_power(i, &w, power, sizeof power); i++)
+                ImGui::Text(menu_text(UI_MENU_PAD_PLAYER), i + 1, w.name), ImGui::SameLine(), ImGui::TextDisabled("%s", power);
+            ImGui::EndTooltip();
+        }
     } else {
         snprintf(text, sizeof text, "%s", menu_text(UI_LAUNCH_PAD_NONE));
     }
@@ -2112,6 +2142,8 @@ extern "C" int launcher_run(void) {
     ImGui::DestroyContext();
     launcher_brand_free();
     backdrop_free();
+    for (SDL_Gamepad *&g : L.pad_open)
+        if (g) SDL_CloseGamepad(g), g = nullptr;
     SDL_DestroyRenderer(L.ren);
     SDL_DestroyWindow(L.win);
     SDL_Quit();
