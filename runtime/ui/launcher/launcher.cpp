@@ -180,6 +180,7 @@ static void read_setup_info(void) {
 
 // The gamepads SDL sees: their count and the first one's name. Called at start and when one is connected or removed.
 static void pads_refresh(void) {
+    input_wheel_map();   // a wheel SDL has no mapping for, as a gamepad (#488); its GAMEPAD_ADDED calls here again
     int n = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
     const char *name = ids && n > 0 ? SDL_GetGamepadNameForID(ids[0]) : nullptr;
@@ -1838,6 +1839,7 @@ static bool open_window(void) {
     SDL_SetHint(SDL_HINT_APP_ID, background ? "mkw-recomp-run" : "mkw-recomp");
     if (background) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
     if (const char *drv = cfg_steam_video_driver()) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, drv);   // as the game's window (cfg.h)
+    input_wheel_hint();
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         rt_log("launcher: SDL_Init failed: %s", SDL_GetError());
         return false;
@@ -2073,6 +2075,7 @@ extern "C" int launcher_run(void) {
             }
             if (e.type == SDL_EVENT_QUIT) L.result = LAUNCHER_QUIT;
             if (e.type == SDL_EVENT_GAMEPAD_ADDED || e.type == SDL_EVENT_GAMEPAD_REMOVED) pads_refresh();
+            if (e.type == SDL_EVENT_JOYSTICK_ADDED && !SDL_IsGamepad(e.jdevice.which)) input_wheel_map();
             if (e.type == SDL_EVENT_KEY_DOWN && e.key.scancode == SDL_SCANCODE_F11 && !e.key.repeat)
                 SDL_SetWindowFullscreen(L.win, !(SDL_GetWindowFlags(L.win) & SDL_WINDOW_FULLSCREEN));
             if (L.shot_at) continue;

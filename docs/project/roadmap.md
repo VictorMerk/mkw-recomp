@@ -68,7 +68,9 @@ with a 3840x2160 output. Players have neither: no cap, the game's resolution.
 - Shader translator bugs found by comparing with another Switch 2 port: three of six fixed, three to go, each
   reapplied alone and checked on a race capture.
 - The kart's shadow misses a frame now and then; two fixes from Ryujinx (MIT) to try.
-- Zero Vulkan validation errors (25 left, 9 kinds), which may be rendering bugs or hangs on other GPUs.
+- Zero Vulkan validation errors, which may be rendering bugs or hangs on other GPUs: whole runs from boot to a race,
+  one player (Grand Prix) and two (split screen), give none since the depth target left in the feedback-loop layout
+  for the first recording chunk was fixed (RX 6700 XT, RADV, 17/11/2026); photo mode and the other modes not checked.
 - Task/mesh shaders as compute: a race on the first thread in the scene lists (bushes and grass).
 
 ## 3. Menus
