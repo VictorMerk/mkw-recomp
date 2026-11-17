@@ -7,6 +7,7 @@
 | `input_script.*` | Button script (`MKW_INPUT_SCRIPT`; a `p<N> ` prefix presses for player N, also through `ctl press`; paused while an `MKW_SEQ_HOLD` phase lasts; a `<phase>+<ticks> BUTTON` line counts from the start of that phase, with `MKW_SEQ_WATCH=1`); the A button of `MKW_SKIP_MOVIES` (`core/hacks/skip.c`) and `MKW_CTL` presses |
 | `input_sdl.*`, `input_wsys.h` | SDL3 back end |
 | `motion_fusion.c` | Gyro and accelerometer |
+| `wheel.c` | Racing wheels SDL has no gamepad mapping for (#488, MOZA R3/R5): a mapping by position (wheel axis to the left stick, first buttons to A, B, X, Y, shoulders, Minus, Plus, first hat to the D-pad; pedals unmapped), and `gamecontrollerdb.txt` from the game folder; for the game and the launcher |
 | `dsu.c`, `dsu.h` | Cemuhook / DSU (DualShock UDP) motion client (`MKW_DSU`, off by default; `MKW_DSU_SERVER`, `MKW_DSU_SLOT`): a DSU server's gyro and accelerometer for a gamepad whose driver gives none, such as an XInput pad (#435) |
 | `switch2_proto.h` | The Switch 2 controllers' Bluetooth LE protocol (Pro Controller 2, Joy-Con 2: GATT ids, handshake, reports, stick calibration, rumble, pairing), from seedds/mkw-neo (MIT) with our button bits; checked by `tests/runtime/test_switch2.py` |
 | `switch2.h`, `switch2.c` | Switch 2 controllers over Bluetooth LE (`MKW_SWITCH2`, off by default; SDL has them over USB only): the session on top of a transport (identity, pairing, calibration, features, player lights, rumble), each pad a virtual SDL gamepad with its gyro, so players, layout and rumble work as for any gamepad |

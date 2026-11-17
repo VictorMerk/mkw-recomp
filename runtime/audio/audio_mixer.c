@@ -9,7 +9,8 @@
 // single-producer single-consumer ring. The SDL audio thread drains that ring without taking any lock: an empty ring
 // plays silence and never blocks the render thread or the guest. MKW_AUDIO=none (or MKW_AUDIO_OFF) mixes without a
 // device; MKW_AUDIO_PREFILL_MS (0..500, default 20) is the queued audio the output waits for after start or underrun,
-// never less than the device's own period plus one render block (SDL asks a whole period at once).
+// never less than the device's own period plus one render block (SDL asks a whole period at once). The stream
+// resamples by the ratio between the game's rate and the one the device really drains (rate_match).
 #include <math.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -57,6 +58,9 @@ typedef struct Mixer {
     uint64_t underruns_logged, blocks_since_log;   // underrun line without MKW_TRACE (render thread)
     uint64_t dry_runs, dry_blocks; int dry_voice, dry_voice_n, dry_count[256];   // voices run dry (level line)
     uint64_t pauses; int pause_voice;              // playing voices the game paused (level line)
+    double ratio, skew;                            // rate_match: the stream's resampling ratio; MKW_AUDIO_SKEW
+    double rm_frames, rm_secs, rm_fill;            // device frames and seconds measured (decaying), queued sum
+    uint64_t rm_ns, rm_pulled; int rm_blocks, rm_logged;
 } Mixer;
 
 static _Atomic float device_volume = 1.0f;
@@ -218,6 +222,13 @@ static void output_open(Mixer *m, int rate) {
         return;
     }
     m->device_ok = 1;
+    m->ratio = 1;
+    const char *skew = cfg_get("MKW_AUDIO_SKEW");
+    m->skew = skew && atof(skew) >= 0.5 && atof(skew) <= 2 ? atof(skew) : 1;
+    if (m->skew != 1) {
+        SDL_SetAudioStreamFrequencyRatio(m->stream, (float)m->skew);
+        rt_log("audio: the device made %.5fx as fast as it says (MKW_AUDIO_SKEW, a test of rate matching)", m->skew);
+    }
     SDL_AudioDeviceID dev = SDL_GetAudioStreamDevice(m->stream);
     SDL_AudioSpec got = {0};
     int period = 0;
@@ -242,6 +253,55 @@ static void underrun_note(Mixer *m) {
            (unsigned long long)(now - m->underruns_logged), (unsigned long long)now,
            (unsigned long long)atomic_load(&m->missing_frames), m->device_frames);
     m->underruns_logged = now;
+}
+
+// Rate matching (#544): the renderer fills the ring at its rate by the wall clock (audren.c render_thread), the device
+// drains it at whatever rate it really runs, and the two differ: by a fraction of a per mille between any sound card's
+// crystal and the system clock, and by 8.1 % on a player's PipeWire (quantum 2048, rates 44100/48000) that took
+// 44 032 frames a second of the 48 000 written (215 requests of 1024 in every 5 s), so the ring stayed full and 8 % of
+// the blocks were dropped: choppy sound. Each second the device's own rate is estimated (frames SDL pulled over the
+// ratio in force, decaying over ~50 s so drift is followed and SDL's period-sized requests average out), and the
+// stream resamples by game rate / device rate, corrected by up to 1 % to bring the queue back to the start threshold
+// plus a period. A device at the right rate keeps a ratio of 1.000x. The level line (MKW_TRACE=audio) gives the ratio.
+// MKW_AUDIO_SKEW (a test, default 1): multiplies the ratio SDL gets without the matching knowing, as a device at
+// another rate would (0.91875 is the player's 44 100 against 48 000). Render thread only.
+static void rate_match(Mixer *m) {
+    if (!m->device_ok) return;
+    m->rm_fill += (double)(atomic_load(&m->wr) - atomic_load_explicit(&m->rd, memory_order_acquire));
+    if (++m->rm_blocks * m->frame < m->rate) return;   // a second of render blocks
+    uint64_t now = kern_now_ns(), pulled = atomic_load(&m->callback_frames);
+    double queued = m->rm_fill / m->rm_blocks;
+    m->rm_fill = 0;
+    m->rm_blocks = 0;
+    if (m->rm_ns) {
+        double secs = (double)(now - m->rm_ns) / 1e9, got = (double)(pulled - m->rm_pulled) / m->ratio;
+        if (secs > 0.5 && secs < 2 && got > 0.5 * m->rate * secs && got < 1.5 * m->rate * secs) {
+            m->rm_frames = m->rm_frames * 0.98 + got;
+            m->rm_secs = m->rm_secs * 0.98 + secs;
+        } else {
+            m->rm_frames = m->rm_secs = 0;   // the device stalled or caught up in a burst: measure again
+        }
+    }
+    m->rm_ns = now;
+    m->rm_pulled = pulled;
+    if (m->rm_secs < 3) return;
+    double device = m->rm_frames / m->rm_secs;
+    double start = (double)m->frame * m->prefill, floor = (double)m->device_frames + m->frame;
+    double target = (start > floor ? start : floor) + m->device_frames;
+    double fix = (queued - target) / (4.0 * m->rate);   // the excess drained over about 4 s
+    if (fix > 0.01) fix = 0.01;
+    if (fix < -0.01) fix = -0.01;
+    double r = m->rate / device * (1 + fix);
+    if (r < 0.85) r = 0.85;
+    if (r > 1.15) r = 1.15;
+    if (fabs(r - m->ratio) < 0.0002) return;
+    m->ratio = r;
+    SDL_SetAudioStreamFrequencyRatio(m->stream, (float)(r * m->skew));
+    if (!m->rm_logged && fabs(m->rate / device - 1) > 0.005) {
+        m->rm_logged = 1;
+        rt_log("audio: the device takes %.0f frames a second of the %d written: resampled by %.4fx to match",
+               device, m->rate, r);
+    }
 }
 
 // Render thread only.
@@ -291,11 +351,13 @@ static void level_note(AudioRenderer *r, Mixer *m, const float *lr, int n) {   /
     }
     if (m->level_frames >= (uint64_t)r->param.sample_rate * 5) {
         rt_log("audio: level rms %.4f peak %.4f over %.1f s; written %llu frames, underruns %llu, overruns %llu, "
-               "missing frames %llu, callback frames %llu (nonzero %llu)",
+               "missing frames %llu, callback frames %llu (nonzero %llu), queued %llu, rate matched %.4fx",
                sqrt(m->level_sum / (double)m->level_count), m->level_peak, m->level_frames / (double)r->param.sample_rate,
                (unsigned long long)atomic_load(&m->wr), (unsigned long long)atomic_load(&m->underruns),
                (unsigned long long)atomic_load(&m->overruns), (unsigned long long)atomic_load(&m->missing_frames),
-               (unsigned long long)atomic_load(&m->callback_frames), (unsigned long long)atomic_load(&m->callback_nonzero));
+               (unsigned long long)atomic_load(&m->callback_frames),
+               (unsigned long long)atomic_load(&m->callback_nonzero),
+               (unsigned long long)(atomic_load(&m->wr) - atomic_load(&m->rd)), m->ratio);
         if (m->dry_runs) {
             int worst = 0;
             for (int k = 1; k < 256; k++) if (m->dry_count[k] > m->dry_count[worst]) worst = k;
@@ -915,6 +977,7 @@ void audio_mixer_render(AudioRenderer *r, double seconds) {
     raw_note(lr, frames * oc);
     output_push(m, lr, frames);
     underrun_note(m);
+    rate_match(m);
 }
 
 // ---- the output device of IAudioDevice (audren_sf.c): one device, stereo or 5.1 (audio_output_channels)
