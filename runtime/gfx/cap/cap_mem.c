@@ -192,6 +192,13 @@ uint64_t cap_mem_delta(CapOut *o) {
 int cap_mem_snapshot(CapOut *o) {
     uint64_t probe[1][2];
     if (plat_mem_populated(mem_layout()->heap.base, PAGE, probe, 1) == UINT64_MAX) return 0;
+    // The hashes describe the previous capture's final delta. A new stream must begin independently, including
+    // unchanged pages and the current bytes of read-trapped pages, rather than a delta relative to that old stream.
+    regions_init();
+    for (int r = 0; r < nregions; r++)
+        for (uint64_t i = 0; i < regions[r].size / CHUNK; i++)
+            if (regions[r].hash[i]) memset(regions[r].hash[i], 0, CPAGES * sizeof *regions[r].hash[i]);
+    snapped = 0;
     cap_mem_delta(o);
     return 1;
 }
