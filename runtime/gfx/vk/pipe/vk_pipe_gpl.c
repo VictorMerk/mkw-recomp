@@ -319,6 +319,25 @@ void lib_keys(const VkPipeState *s, const GKey *k, ViKey *v, PrKey *pk, FsKey *f
     memcpy(ok->color, k->color, sizeof ok->color), memcpy(ok->blend, k->blend, sizeof ok->blend);
 }
 
+// MKW_PIPE_MISS=1 (diagnosis): each draw that finds a shader library missing, with the key fields that tell why the
+// boot prewarm (vk_pipe_pairs.c) did not build it: which library, the shader keys, whether the vertex shader is an
+// integer-input variant (its key differs from its program key), the added outputs and the fragment state.
+static void miss_trace(const VkPipeState *s, const PrKey *pk, const FsKey *fk) {
+    static int on = -1;
+    if (on < 0) { const char *e = cfg_get("MKW_PIPE_MISS"); on = e && *e && *e != '0'; }
+    if (!on) return;
+    int pr = !lib_find(key_hash(pk, sizeof *pk), pk, sizeof *pk), fs = !lib_find(key_hash(fk, sizeof *fk), fk, sizeof *fk);
+    char v[65] = "", f[65] = "";
+    for (int i = 0; i < 32; i++) {
+        sprintf(v + 2 * i, "%02x", gfx_shader_input_id(s->vs)[i]);
+        if (s->fs) sprintf(f + 2 * i, "%02x", gfx_shader_input_id(s->fs)[i]);
+    }
+    rt_log("vk_pipeline: miss %s%s vs %s%s fs %s%s missing %#x clamp %u poly %u minus_w %u dsb %u a2c %u alpha %u",
+           pr ? "pr" : "", fs ? "fs" : "", v, memcmp(gfx_shader_key(s->vs), gfx_shader_input_id(s->vs), 32) ? " (variant)" : "",
+           f, s->fs && memcmp(gfx_shader_key(s->fs), gfx_shader_input_id(s->fs), 32) ? " (variant)" : "", pk->missing,
+           pk->clamp, pk->poly_mode, pk->minus_w, fk->dsb, fk->a2c, fk->alpha_func);
+}
+
 // A fast-linked pipeline for s from its stage libraries. Caller holds P.lock.
 // build 0 (drawing thread): links only when the shader libraries exist (vertex input and fragment output libraries,
 // which hold no shader, are built here); *final 0 = not yet, a worker builds them. build 1 (worker): builds the
@@ -339,7 +358,7 @@ VkPipeline gpl_link(const VkPipeState *s, const GKey *k, const Layout *lc, int b
     lib[1] = lib_get(LIB_PR, s, k, l, &pk, sizeof pk, build, &miss);   // shader libraries first: no work when absent
     lib[2] = miss ? VK_NULL_HANDLE : lib_get(LIB_FS, s, k, l, &fk, sizeof fk, build, &miss);
     if (miss) {
-        if (!build) *final = 0, P.g.defer++;
+        if (!build) *final = 0, P.g.defer++, miss_trace(s, &pk, &fk);
         return VK_NULL_HANDLE;
     }
     lib[0] = lib_get(LIB_VI, s, k, l, &vk_, sizeof vk_, 1, &miss);
