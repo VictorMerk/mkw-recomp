@@ -371,8 +371,26 @@ static const char *button_icons_note(void) {
     return note;
 }
 
+// Each player's controller and its battery (input/input_power.c), over the settings (discussion #516).
+static void pad_rows(void) {
+    if (!input_gamepads_running()) return;   // the start screen shows them on its main page (launcher.cpp pad_row)
+    opt_group(UI_MENU_PADS);
+    int shown = 0;
+    for (int p = 0; p < INPUT_MAX_PLAYERS; p++) {
+        InputPower w;
+        if (input_pad_power(p, &w) == INPUT_POWER_NONE) continue;
+        char id[16], label[128], value[64];
+        snprintf(id, sizeof id, "##pad%d", p + 1);
+        snprintf(label, sizeof label, menu_text(UI_MENU_PAD_PLAYER), p + 1, w.name);
+        opt_info(id, label, input_power_text(&w, value, sizeof value), UI_MENU_PAD_BATTERY_DESC);
+        shown++;
+    }
+    if (!shown) opt_text(UI_MENU_PADS_NONE);
+}
+
 static void tab_controls(float scale) {
     opt_begin("##controls", scale);
+    pad_rows();
     static const UiTextId layout[] = {UI_MENU_PAD_LAYOUT_AUTO, UI_MENU_PAD_LAYOUT_NINTENDO, UI_MENU_PAD_LAYOUT_XBOX};
     opt_choice("MKW_PAD_LAYOUT", UI_MENU_PAD_LAYOUT, layout, 3, UI_MENU_PAD_LAYOUT_DESC, pad_layout_note());
     static const UiTextId icons[] = {UI_MENU_AUTO, UI_MENU_ICONS_NINTENDO, UI_MENU_ICONS_XBOX, UI_MENU_ICONS_PLAYSTATION,

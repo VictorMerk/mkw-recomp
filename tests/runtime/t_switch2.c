@@ -245,6 +245,17 @@ int main(void) {
     pad.right.r.buttons = 0xE0000000u; pad.left.r.buttons = 0xE0000000u | S2_HOME; ha = hb = 0;
     s2_pad_ab(&pad, &ha, &hb); CHECK(s2_pad_home(&pad) && !ha && !hb);
     memset(&pad, 0, sizeof pad); CHECK(!s2_pad_home(&pad));
+
+    // Battery bands from the voltage, with 25 mV of hysteresis at an edge, and a pad's lowest controller
+    CHECK(s2_battery_band(0) == S2_BATTERY_UNKNOWN && s2_battery_band(6000) == S2_BATTERY_UNKNOWN);
+    CHECK(s2_battery_band(3495) == S2_BATTERY_HIGH && s2_battery_band(3200) == S2_BATTERY_MEDIUM && s2_battery_band(3100) == S2_BATTERY_LOW);
+    CHECK(s2_battery_band_next(S2_BATTERY_UNKNOWN, 3240) == S2_BATTERY_MEDIUM);
+    CHECK(s2_battery_band_next(S2_BATTERY_MEDIUM, 3260) == S2_BATTERY_MEDIUM && s2_battery_band_next(S2_BATTERY_MEDIUM, 3280) == S2_BATTERY_HIGH);
+    CHECK(s2_battery_band_next(S2_BATTERY_HIGH, 3240) == S2_BATTERY_HIGH && s2_battery_band_next(S2_BATTERY_HIGH, 3220) == S2_BATTERY_MEDIUM);
+    CHECK(s2_battery_band_next(S2_BATTERY_HIGH, 3000) == S2_BATTERY_LOW && s2_battery_band_next(S2_BATTERY_LOW, 0) == S2_BATTERY_UNKNOWN);
+    memset(&pad, 0, sizeof pad); CHECK(s2_pad_battery_mv(&pad) == 0);
+    pad.left.have = pad.right.have = 1; pad.left.r.battery_mv = 3495; pad.right.r.battery_mv = 3464; CHECK(s2_pad_battery_mv(&pad) == 3464);
+    pad.right.r.battery_mv = 0; CHECK(s2_pad_battery_mv(&pad) == 3495);   // the right one has not reported yet
     printf("t_switch2: %d checks, %d failed\n", checks, fails);
     return fails != 0;
 }

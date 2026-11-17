@@ -890,6 +890,61 @@ msgid "%d players need a controller each: %d connected. The keyboard only counts
 msgstr ""
 "Graczy: %d, każdy potrzebuje kontrolera; podłączono: %d. Klawiatura liczy się tylko dla gracza 1."
 
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Kontrolery"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "Gracz %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"Bateria kontrolera każdego gracza, tak jak zgłasza ją kontroler. Niektóre kontrolery jej nie "
+"zgłaszają. Kontroler Switch 2 przez Bluetooth zgłasza napięcie, pokazane jako wysokie, średnie "
+"lub niskie."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Brak podłączonego kontrolera"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Niskie"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Średnie"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Wysokie"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "Ładowanie"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Naładowany"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Przewodowy"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Brak informacji o baterii"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "W kontrolerze gracza %d kończy się bateria (%s)"
+
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
 msgstr "Zresetuj wszystkie przyciski"

@@ -831,6 +831,60 @@ msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr "%d人のプレイヤーにはそれぞれコントローラーが必要です。接続数は%dです。キーボードはプレイヤー1のみ使えます。"
 
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "コントローラー"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "プレイヤー%d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"各プレイヤーのコントローラーの電池残量（コントローラーが報告する値）。報告しないコントローラーもあります。Bluetooth接続のSwitch "
+"2のコントローラーは電圧を報告し、高・中・低で表示します。"
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "コントローラーが接続されていません"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "低"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "中"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "高"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "充電中"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "充電完了"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "有線"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "電池残量の情報なし"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "プレイヤー%dのコントローラーの電池残量が少なくなっています（%s）"
+
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
 msgstr "すべてのボタンを初期化"
