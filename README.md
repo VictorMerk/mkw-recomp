@@ -34,7 +34,8 @@
   <a href="docs/i18n/README.ar.md">العربية</a> ·
   <a href="docs/i18n/README.hi.md">हिन्दी</a> ·
   <a href="docs/i18n/README.pt-BR.md">Português (Brasil)</a> ·
-  <a href="docs/i18n/README.pt-PT.md">Português (Portugal)</a>
+  <a href="docs/i18n/README.pt-PT.md">Português (Portugal)</a> ·
+  <a href="docs/i18n/README.de.md">Deutsch</a>
 </p>
 <!-- i18n-bar:end -->
 
@@ -139,7 +140,11 @@ Beyond the console, all optional and off (or at the console's value) by default:
 - **Controls**: every key and button rebindable, mouse camera, Nintendo, Xbox or PlayStation button icons, motion
   steering, vibration strength; local multiplayer with one controller each.
   Switch 2 controllers (Pro Controller, Joy-Con, GameCube) work over Bluetooth and, on Linux, over USB; on Windows
-  USB needs a one-time driver step, below.
+  USB needs a one-time driver step, below. A controller whose gyro the game does not see (one in XInput mode) can
+  send it through a Cemuhook / DSU server (DS4Windows, BetterJoy...): Settings > Controls > Motion from a DSU server.
+  Racing wheels without a controller mapping (MOZA and other DirectInput wheels) work as a controller: the wheel
+  steers and its first buttons are A, B, X, Y; for the pedals, put a `gamecontrollerdb.txt` (SDL's format) in the game
+  folder.
 - **Hacks**: turbo (hold or toggle F2), skip movies, unlock everything, the same randomness every time, straight to
   time trial or free roam.
 - **Languages**: the menus in 20 languages; the game itself also in Catalan, Galician and Basque.

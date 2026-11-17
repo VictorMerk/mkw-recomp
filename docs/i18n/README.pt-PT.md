@@ -1,4 +1,4 @@
-<!-- translated from README.md dae9dd5efeb2 -->
+<!-- translated from README.md dae9dd5efeb2 body 6c4613c64b26 -->
 
 <p align="center"><img src="../images/logo.svg" width="128" alt="mkw-recomp logo"></p>
 
@@ -36,7 +36,8 @@
   <a href="README.ar.md">العربية</a> ·
   <a href="README.hi.md">हिन्दी</a> ·
   <a href="README.pt-BR.md">Português (Brasil)</a> ·
-  <b>Português (Portugal)</b>
+  <b>Português (Portugal)</b> ·
+  <a href="README.de.md">Deutsch</a>
 </p>
 <!-- i18n-bar:end -->
 

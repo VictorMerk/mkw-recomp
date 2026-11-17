@@ -3,7 +3,7 @@
 Why: the last resort when q.py is not enough (argument meaning, a field offset). One function at a time, with names,
 so it costs few tokens.
 
-Usage: uv run tools/analisis/bin/disasm.py MODULE+0xOFFSET [--count N] [--exefs DIR]
+Usage: uv run tools/analisis/bin/disasm.py MODULE+0xOFFSET [--count N] [--exefs DIR] [--db DB]
 The function is the one containing the address (build/bindb.sqlite); --count disassembles N instructions from the
 address instead.
 """
@@ -34,10 +34,11 @@ def main() -> None:
     ap.add_argument("addr")
     ap.add_argument("--count", type=int)
     ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("MKW_GAME", "game")) / "exefs")
+    ap.add_argument("--db", type=Path, default=ROOT / "build/bindb.sqlite", help="1.8.0: build/bindb-180.sqlite")
     a = ap.parse_args()
     mod, off = a.addr.split("+")
     off = int(off, 16)
-    db = sqlite3.connect(ROOT / "build/bindb.sqlite")
+    db = sqlite3.connect(a.db)
     base = {m: b for m, b in db.execute("SELECT name, base FROM module")}
     addr = base[mod] + off
     if a.count:

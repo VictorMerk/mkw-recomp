@@ -26,6 +26,7 @@ does it and the pre-commit checks it.
 | 0.1.12 | RTX 5080 (NVIDIA 621.24) | Ryzen 9 9950X3D, 32 GB | Windows 11 | 900p | Race (Lightning Cup) | 16.7 ms, max 18.8 ms (the overlay; no log attached) | [#428](https://github.com/adriadam10/mkw-recomp/issues/428) |
 | 0.1.12 | RX 9070 XT (AMD 26.10.1) | Ryzen 5 5600X, 32 GB | Windows 11 | 1440p | Race | 16.8 ms, max 24.2 ms; 11 frames over 33 ms in the last minute (the overlay; no log attached) | [#431](https://github.com/adriadam10/mkw-recomp/issues/431) |
 | source | RX 9070 XT (Mesa 26.2.5 RADV) | Ryzen 7 7800X3D | Linux (CachyOS) | 720p to 2160p | Race | 16.7 ms (no log attached) | [#97](https://github.com/adriadam10/mkw-recomp/issues/97) |
+| source | RX 6700 XT (Mesa 26.2.6 RADV) | Core i7-14700F, 32 GB | Linux 7.2 (Bazzite) | 1440p | Race (1.8.0, Grand Prix) | 16.9 ms median with the GPU clock held (`MKW_GPU_CLOCKS`, gc-def); 21.2 ms before it, 38-41 ms when amdgpu left the clock at 500 MHz | contributor ([#521](https://github.com/adriadam10/mkw-recomp/pull/521)) |
 
 Players' rows come from the log attached to each report, not from the times written in it (they were often better
 than the log): the median of its 60-second frame-time windows, or of its race windows where the run had

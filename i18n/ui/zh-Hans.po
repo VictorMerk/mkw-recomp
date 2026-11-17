@@ -708,6 +708,16 @@ msgid ""
 "open. Applies at the next start."
 msgstr "通过蓝牙使用 Joy-Con 2 和 Pro 手柄 2。要配对手柄，请在游戏打开时按住其同步按钮。下次启动时生效。"
 
+msgctxt "UI_MENU_DSU"
+msgid "Motion from a DSU server"
+msgstr ""
+
+msgctxt "UI_MENU_DSU_DESC"
+msgid ""
+"The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
+"Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
+msgstr ""
+
 msgctxt "UI_MENU_STICK_DEADZONE"
 msgid "Stick dead zone"
 msgstr "摇杆死区"
@@ -808,6 +818,58 @@ msgstr "%s 与 %s 已互换"
 msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr "%d 名玩家各需要一个手柄：当前已连接 %d 个。键盘只算作玩家 1。"
+
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "手柄"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "玩家%d：%s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr "每位玩家手柄的电量，以手柄报告的为准。有些手柄不报告电量。通过蓝牙连接的 Switch 2 手柄报告的是电压，显示为高、中、低。"
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "未连接手柄"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "低"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "中"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "高"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "充电中"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "已充满"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "有线"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "未报告电量"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "玩家%d的手柄电量不足（%s）"
 
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
@@ -2544,3 +2606,52 @@ msgstr "移除档案 %s？它会从列表中消失，存档保留在 profile/pla
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "无法保存档案（原因见日志）。"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_SETUP_ERR_SPACE"
+msgid ""
+"not enough free space: the setup needs %s. Free some space, or choose \"Use it where it is\" for "
+"the RomFS, which needs no copy"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN"
+msgid "Start screen"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN_DESC"
+msgid ""
+"Automatic skips it when the game starts from Steam's Big Picture or Gaming Mode, as on a console. "
+"It still opens when the game files need setting up, after an error, or when you hold View / "
+"Select (Minus) at start."
+msgstr ""
+
+msgctxt "UI_MENU_START_ALWAYS"
+msgid "Always"
+msgstr ""
+
+msgctxt "UI_MENU_START_SKIP"
+msgid "Skip"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
+msgstr ""

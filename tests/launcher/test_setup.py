@@ -67,6 +67,20 @@ def test_resume_from_moved_folder(tmp_path: Path) -> None:
     assert p.returncode == 1 and f"error moved {gone}" in p.stdout, p.stdout + p.stderr
 
 
+def test_resume_copy_source_deleted(tmp_path: Path) -> None:
+    # issue #501: a copy's original files deleted after the setup; the game folder holds them and is the source now
+    game = tmp_path / ODD / "game"
+    (game / "exefs").mkdir(parents=True)
+    (game / "exefs/main").write_bytes(b"\0")
+    (game / "romfs").mkdir()
+    gone = tmp_path / ODD / "deleted"
+    state = {"version": 1, "source": str(gone), "romfs_mode": "copy", "done": {"romfs": "copy 1.8.0"}}
+    (game / "setup-state.json").write_text(json.dumps(state))
+    p = run_prepare("--game", str(game))
+    assert "error moved" not in p.stdout and "step check" in p.stdout, p.stdout + p.stderr
+    assert f"error nogame {game}" in p.stdout or str(game) in p.stdout.split("step check", 1)[1], p.stdout
+
+
 def test_keys_from_before_kept() -> None:
     # a step done under its key with the source folders (before 0.1.10) is not redone; another key still is
     state = {"done": {"shaders": "/old/exefs /old/romfs t1", "compile": "/old/exefs c1"}}
@@ -98,6 +112,68 @@ def test_versions() -> None:
     assert update.version_key("0.1.2-12-g1c15097") == (0, 1, 2)
     assert update.version_key("v0.1.10") > update.version_key("0.1.9")
     assert update.version_key("dev") is None
+
+
+@pytest.mark.parametrize("os_name", ["linux", "linux-aarch64", "windows"])
+@pytest.mark.parametrize("damage", ["none", "size", "digest"])
+def test_fetch_update_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], os_name: str, damage: str
+) -> None:
+    """Both Linux architectures stage an executable AppImage; only Windows extracts a ZIP, after integrity checks."""
+    import hashlib
+    import zipfile
+
+    payload = b"synthetic update payload; never executed\n"
+    source = tmp_path / "download"
+    if os_name == "windows":
+        with zipfile.ZipFile(source, "w") as archive:
+            archive.writestr("mkw-recomp/mkw.exe", payload)
+    else:
+        source.write_bytes(payload)
+    data = source.read_bytes()
+    asset = {
+        "name": "mkw-recomp-v9.8.7" + update.ASSET_SUFFIX[os_name],
+        "size": len(data) + (damage == "size"),
+        "digest": "sha256:" + ("0" * 64 if damage == "digest" else hashlib.sha256(data).hexdigest()),
+        "browser_download_url": source.as_uri(),
+    }
+    metadata = tmp_path / "release.json"
+    metadata.write_text(json.dumps({
+        "tag_name": "v9.8.7", "draft": False, "prerelease": False,
+        "assets": [dict(asset, name="mkw-recomp-v9.8.7" + suffix) for suffix in update.ASSET_SUFFIX.values()],
+    }))
+    real_get = update.get
+
+    def local_get(url: str, timeout: int):
+        # Redirect only the release API to a local JSON file; selection, reads and staging use production code.
+        if url == f"https://api.github.com/repos/{update.REPO}/releases/latest":
+            url = metadata.as_uri()
+        else:
+            assert url == source.as_uri(), f"unexpected network request: {url}"
+        return real_get(url, timeout)
+
+    monkeypatch.setattr(update, "get", local_get)
+    dest = (tmp_path / ODD).resolve()
+    monkeypatch.setattr(sys, "argv", ["update.py", "fetch", "--os", os_name, "--tag", "v9.8.7", "--dest", str(dest)])
+    part = dest / (asset["name"] + ".part")
+    if damage != "none":
+        with pytest.raises(SystemExit) as exited:
+            update.main()
+        assert exited.value.code == 1
+        assert not part.exists() and not list(dest.iterdir())
+        output = capsys.readouterr()
+        assert "error fetch " in output.out and "came damaged" in output.out and "ready " not in output.out
+        assert not output.err
+        return
+    update.main()
+    out = dest / "new/mkw-recomp/mkw.exe" if os_name == "windows" else dest / asset["name"]
+    assert out.read_bytes() == payload and not part.exists()
+    ready = out.parent if os_name == "windows" else out
+    assert f"ready {ready}\n" in capsys.readouterr().out
+    if os_name != "windows":
+        assert not (dest / "new").exists()
+        if os.name != "nt":
+            assert out.stat().st_mode & 0o777 == 0o755
 
 
 def test_romfs_version_matches_main() -> None:
@@ -193,19 +269,18 @@ assert machine.package_dir(Path(sys.argv[2])) == Path(sys.argv[3])
 def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     game, runtime = tmp_path / ODD / "game", tmp_path / "launcher"
     calls = []
-    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
-        return process
+        return SimpleNamespace(returncode=0)
 
-    monkeypatch.setattr(prepare.subprocess, "Popen", start)
-    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
+    monkeypatch.setattr(prepare.subprocess, "run", start)
     prepare.warm(game, game / "setup-work", runtime)
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw"))]
+    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw")), "--prewarm"]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(game)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
+    assert kwargs["env"]["MKW_LOG_NAME"] == "warm"
+    assert kwargs["timeout"] == prepare.WARM_TIMEOUT and kwargs["check"] is False
 
 
 @pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
@@ -219,19 +294,17 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     alias.symlink_to(target, target_is_directory=True)
     runtime, source = tmp_path / "launcher", tmp_path / "dump"
     calls = []
-    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
-        return process
+        return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(prepare, "own_children", lambda: None)
     monkeypatch.setattr(prepare.update, "ca_file", lambda: None)
     monkeypatch.setattr(prepare, "STEPS", ("check", "warm"))
     monkeypatch.setattr(prepare, "check", lambda *args: (source / "exefs", source / "romfs",
                                                        SimpleNamespace(name="test")))
-    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
-    monkeypatch.setattr(prepare.subprocess, "Popen", start)
+    monkeypatch.setattr(prepare.subprocess, "run", start)
     monkeypatch.setattr(sys, "argv", ["prepare.py", "--game", str(alias), "--runtime", str(runtime),
                                       "--source", str(source)])
     # main opens its setup log on stderr. Restore pytest's capture stream after exercising the real argument path
@@ -244,9 +317,9 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
         if sys.stderr is not original_stderr:
             sys.stderr.close()
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / "mkw")]
+    assert argv == [str(runtime / "mkw"), "--prewarm"]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(alias)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
+    assert kwargs["env"]["MKW_LOG_NAME"] == "warm"
 
 
 @pytest.mark.parametrize("driver", ["clang", "lld-link", "zig"])
@@ -502,3 +575,24 @@ def test_damaged_generated_c_raises_to_regenerate(tmp_path: Path) -> None:
     assert gamecode.compile_one(["cc"], [], src, out, stamp, "k").startswith("main_0203.c: ")
     src.write_text("int x = 1;\n")
     assert gamecode.compile_one(["cc"], [], src, out, stamp, "k") == "" and stamp.read_text() == "k"
+
+
+def test_space_checked_before_copying(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """gamecopy.check_space: a drive with less free than the setup needs fails with code "space" (the start screen's
+    translated text) and what is needed and free; enough passes; what a cut copy left is not needed again."""
+    import gamecopy
+
+    src = tmp_path / "dump/romfs"
+    src.mkdir(parents=True)
+    (src / "a.bin").write_bytes(b"x" * 3000)
+    (src / "b.bin").write_bytes(b"x" * 1000)
+    assert gamecopy.romfs_bytes(src) == 4000 and gamecopy.romfs_bytes(tmp_path / "missing") == 0
+    done = tmp_path / "game/romfs"
+    done.mkdir(parents=True)
+    (done / "a.bin").write_bytes(b"x" * 3000)
+    assert gamecopy.romfs_bytes(src) - gamecopy.tree_bytes(done) == 1000
+    monkeypatch.setattr(gamecopy.shutil, "disk_usage", lambda p: SimpleNamespace(free=2 * gamecopy.GIB))
+    gamecopy.check_space(tmp_path / "game/not yet", 2 * gamecopy.GIB)
+    with pytest.raises(gamecopy.Failed) as e:
+        gamecopy.check_space(tmp_path / "game", 5 * gamecopy.GIB)
+    assert e.value.code == "space" and e.value.detail.startswith("5.0 GB, 2.0 GB free in ")

@@ -82,3 +82,55 @@ def test_no_steam_pid_is_not_running(tmp_path: Path) -> None:
     assert steam.steam_running(tmp_path / "steam") is False
     (tmp_path / "steam.pid").write_text("not a pid\n")
     assert steam.steam_running(tmp_path / "steam") is False
+
+
+def test_library_art_written_once_and_named_as_the_icon(tmp_path: Path) -> None:
+    """Gaming Mode's images (steam.write_art): the five files as PNGs of their sizes, a file already there (the
+    player's own) kept, and the shortcut's icon the drawn one, since Steam takes none from a Linux executable."""
+    grid, appid = tmp_path / "grid", 2675230854
+    grid.mkdir()
+    (grid / f"{appid}_hero.png").write_bytes(b"the player's own")
+    icon = steam.write_art(grid, appid)
+    sizes = {f"{appid}p.png": (600, 900), f"{appid}.png": (920, 430), f"{appid}_logo.png": (320, 320),
+             f"{appid}_icon.png": (320, 320)}  # fmt: skip
+    for name, (w, h) in sizes.items():
+        data = (grid / name).read_bytes()
+        assert data[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack(">II", data[16:24]) == (w, h), name
+    assert (grid / f"{appid}_hero.png").read_bytes() == b"the player's own"
+    p = tmp_path / "shortcuts.vdf"
+    steam.add(p, NAME, EXE, "/games/mkw", str(icon))
+    row = steam.read_map(p.read_bytes(), 0)[0]["shortcuts"]["0"]
+    assert row["icon"] == str(icon)
+
+
+def test_art_from_the_start_screen_replaces_ours_only(tmp_path: Path) -> None:
+    """--art (launcher.cpp steam_art_draw): its files are used; a later run replaces what this script wrote, never an
+    image the player put there after."""
+    grid, art, appid = tmp_path / "grid", tmp_path / "art", 2675230854
+    art.mkdir()
+    for src in steam.ART.values():
+        (art / src).write_bytes(b"first " + src.encode())
+    steam.write_art(grid, appid, art)
+    assert (grid / f"{appid}p.png").read_bytes() == b"first portrait.png"
+    (grid / f"{appid}_hero.png").write_bytes(b"the player's own")
+    for src in steam.ART.values():
+        (art / src).write_bytes(b"second " + src.encode())
+    steam.write_art(grid, appid, art)
+    assert (grid / f"{appid}p.png").read_bytes() == b"second portrait.png"
+    assert (grid / f"{appid}_hero.png").read_bytes() == b"the player's own"
+
+
+def test_a_second_path_replaces_our_shortcut_not_the_players(tmp_path: Path) -> None:
+    """Added again from another program path (the launcher's button after a script, a moved AppImage): the shortcut
+    this script added before is replaced, one Mario Kart World stays; a player's own shortcut of that name stays too."""
+    vdf = tmp_path / "config/shortcuts.vdf"
+    vdf.parent.mkdir()
+    steam.add(vdf, NAME, "/games/old/mkw", "/games/old")
+    old = zlib.crc32(('"/games/old/mkw"' + NAME).encode()) | 0x80000000
+    steam.write_art(tmp_path / "config/grid", old)   # the record that marks it as ours
+    rows = steam.read_map(vdf.read_bytes(), 0)[0]["shortcuts"]
+    rows["1"] = {"appid": -5, "appname": NAME, "Exe": '"/home/me/my-own-mkw.sh"'}   # the player's own, as Steam writes it
+    vdf.write_bytes(b"\x00shortcuts\x00" + steam.write_map(rows) + b"\x08")
+    steam.add(vdf, NAME, "/games/new/mkw", "/games/new")
+    got = [r.get("Exe", r.get("exe")) for r in steam.read_map(vdf.read_bytes(), 0)[0]["shortcuts"].values()]
+    assert got == ['"/home/me/my-own-mkw.sh"', '"/games/new/mkw"']

@@ -632,8 +632,8 @@ typedef struct VkPipeState {
                                            // (OP_PRIM_RESTART, set by op_draw_idx); dynamic state only
     uint8_t feedback;                      // the fragment shader samples an attachment of the pass in the feedback
                                            // layout: 1 colour, 2 depth/stencil (VK_PIPELINE_CREATE_*_FEEDBACK_LOOP_BIT_EXT)
-    float alpha_ref;                       // OP_ALPHA_REF; 0 unless color.alpha_func tests (the draw clears it). It
-                                           // fills padding: KeyRec (pipeline-keys.bin) keeps its size
+    float pad_ref;                         // 0. The alpha test's reference was here until 17/11/2026; it now goes in
+                                           // the support buffer (support_in), not the pipeline. KeyRec keeps its size
     blend_st blend[8];                    // OP_BIND_STATE kind 0, indexed by blend_st.target
     color_st color;                        // kinds 1-5
     chmask_st chmask;
@@ -645,7 +645,7 @@ typedef struct VkPipeState {
     const GfxShader *mesh;                 // a task/mesh draw whose vs is the task program: its mesh program; NULL
                                            // otherwise (a mesh program alone sits in vs)
 } VkPipeState;
-_Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "alpha_ref must stay in the padding (KeyRec size)");
+_Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "pad_ref must stay in the padding (KeyRec size)");
 void vk_pipe_state_defaults(VkPipeState *s);   // NVN defaults of every state object (shaders and formats left 0)
 enum { VK_PIPE_SUPPORT = GFX_RES_KINDS };      // VkPipeBinding.kind of the support buffer
 #define VK_PIPE_STAGE_NVN 0x80                 // VkPipeBinding.stage of a task or mesh binding: this | its NVN stage (6, 7)
@@ -696,9 +696,13 @@ void vk_pipeline_async_enable(void);
 void vk_pipeline_async_busy(unsigned *inflight, int *building);
 // Boot prewarm, before the guest runs (rt_boot): loads the shaders pipeline-keys.bin names, translating the ones not
 // cached under the current translator from their stored inputs, and builds every recorded pipeline, on all cores.
-// No-op without vk_pipeline_async_enable, with MKW_PIPE_PREBUILD=0 or with MKW_GPU=null.
+// No-op without vk_pipeline_async_enable, with MKW_PIPE_PREBUILD=0 or with MKW_GPU=null. First the shader libraries of
+// every program pair of the game copy (pipeline-pairs.bin, vk_pipe_pairs.c).
 void vk_pipeline_prewarm(void);
 VkPipeline vk_pipeline_compute(const GfxShader *cs, const VkPipeInfo **info);
+// The same with the program's FIRST_STORE set (gfx_shader_first_store): 1 only the first invocation's stores, 2 all
+// but them; same layout as vk_pipeline_compute's
+VkPipeline vk_pipeline_compute_first(const GfxShader *cs, uint32_t first, const VkPipeInfo **info);
 // Task/mesh as compute (vk_mesh_cs.c): whether DrawMeshTasks goes that way, and its device-local scratch for a
 // submission (fence): buffer, offset and GPU address; 0 when no memory.
 int vk_mesh_cs_on(void);

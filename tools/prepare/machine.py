@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/build"))
@@ -175,8 +176,12 @@ def mem_gb() -> float:
 
 
 def run(cmd: list[str], env: dict[str, str] | None = None, progress_prefix: str = "") -> None:
-    """A tool's run; its 'progress n total' lines (translate.py) pass through, the rest goes to stderr."""
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+    """A tool's run; its 'progress n total' lines (translate.py) pass through, the rest goes to stderr, and at its end
+    "time: tool <name> <wall> s, cpu <s> s": a step's line alone did not say which of its tools took the time (the
+    shaders step is spec, extract, translate and pipeline_pairs). The CPU time of the children is 0 on Windows
+    (os.times)."""
+    t0, c0 = time.monotonic(), os.times()
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", env=env)
     tail = []
     for line in p.stdout:
         if progress_prefix and line.startswith(progress_prefix):
@@ -184,5 +189,9 @@ def run(cmd: list[str], env: dict[str, str] | None = None, progress_prefix: str 
         else:
             sys.stderr.write(line)
             tail = (tail + [line.strip()])[-5:]
-    if p.wait():
-        raise Failed(f"{Path(cmd[1] if len(cmd) > 1 else cmd[0]).name} failed: {' / '.join(tail)}")
+    rc, c1 = p.wait(), os.times()
+    name = Path(cmd[1] if len(cmd) > 1 else cmd[0]).name
+    cpu = c1.children_user + c1.children_system - c0.children_user - c0.children_system
+    print(f"time: tool {name} {time.monotonic() - t0:.1f} s, cpu {cpu:.1f} s", file=sys.stderr)
+    if rc:
+        raise Failed(f"{name} failed: {' / '.join(tail)}")

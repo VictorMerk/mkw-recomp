@@ -771,6 +771,16 @@ msgstr ""
 "Joy-Con 2 e Pro Controller 2 por Bluetooth. Para emparelhar um, mantenha o botão Sync premido com "
 "o jogo aberto. Aplica-se no próximo arranque."
 
+msgctxt "UI_MENU_DSU"
+msgid "Motion from a DSU server"
+msgstr ""
+
+msgctxt "UI_MENU_DSU_DESC"
+msgid ""
+"The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
+"Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
+msgstr ""
+
 msgctxt "UI_MENU_STICK_DEADZONE"
 msgid "Stick dead zone"
 msgstr "Zona morta do manípulo"
@@ -880,6 +890,60 @@ msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr ""
 "%d jogadores precisam de um comando cada: há %d ligados. O teclado só conta para o jogador 1."
+
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Comandos"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "Jogador %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"A bateria do comando de cada jogador, tal como o comando a indica. Alguns comandos não a indicam. "
+"Um comando da Switch 2 por Bluetooth indica uma tensão, mostrada como alta, média ou baixa."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Nenhum comando ligado"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Baixa"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Média"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Alta"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "A carregar"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Carregado"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Com cabo"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Bateria não indicada"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "O comando do jogador %d está quase sem bateria (%s)"
 
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
@@ -2665,3 +2729,52 @@ msgstr ""
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "Não foi possível guardar o perfil (o registo diz porquê)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_SETUP_ERR_SPACE"
+msgid ""
+"not enough free space: the setup needs %s. Free some space, or choose \"Use it where it is\" for "
+"the RomFS, which needs no copy"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN"
+msgid "Start screen"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN_DESC"
+msgid ""
+"Automatic skips it when the game starts from Steam's Big Picture or Gaming Mode, as on a console. "
+"It still opens when the game files need setting up, after an error, or when you hold View / "
+"Select (Minus) at start."
+msgstr ""
+
+msgctxt "UI_MENU_START_ALWAYS"
+msgid "Always"
+msgstr ""
+
+msgctxt "UI_MENU_START_SKIP"
+msgid "Skip"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
+msgstr ""

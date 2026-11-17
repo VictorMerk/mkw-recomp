@@ -772,6 +772,18 @@ msgstr ""
 "Joy-Con 2 y Pro Controller 2 por Bluetooth. Para vincular uno, mantén presionado su botón Sync "
 "con el juego abierto. Se aplica en el próximo inicio."
 
+msgctxt "UI_MENU_DSU"
+msgid "Motion from a DSU server"
+msgstr "Movimiento desde un servidor DSU"
+
+msgctxt "UI_MENU_DSU_DESC"
+msgid ""
+"The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
+"Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
+msgstr ""
+"El giroscopio de un mando que no se lo da al juego, como uno en modo XInput, leído de un servidor "
+"Cemuhook / DSU (DS4Windows, BetterJoy...) en 127.0.0.1:26760 (dsu_server en mkw.ini)."
+
 msgctxt "UI_MENU_STICK_DEADZONE"
 msgid "Stick dead zone"
 msgstr "Zona muerta de la palanca"
@@ -882,6 +894,61 @@ msgid "%d players need a controller each: %d connected. The keyboard only counts
 msgstr ""
 "%d jugadores necesitan un control cada uno: hay %d conectados. El teclado solo cuenta para el "
 "jugador 1."
+
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Controles"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "Jugador %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"La batería del control de cada jugador, tal como la indica el control. Algunos controles no la "
+"indican. Un control de Switch 2 por Bluetooth indica un voltaje, que se muestra como alto, medio "
+"o bajo."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Sin control conectado"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Baja"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Media"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Alta"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "Cargando"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Cargado"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Con cable"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Batería no indicada"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "Al control del jugador %d se le acaba la batería (%s)"
 
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
@@ -2669,3 +2736,59 @@ msgstr ""
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "No se pudo guardar el perfil (el registro dice por qué)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_SETUP_ERR_SPACE"
+msgid ""
+"not enough free space: the setup needs %s. Free some space, or choose \"Use it where it is\" for "
+"the RomFS, which needs no copy"
+msgstr ""
+"no hay espacio libre suficiente: la preparación necesita %s. Libera espacio, o elige \"Usarlo "
+"donde está\" para la RomFS, que no necesita copia"
+
+msgctxt "UI_MENU_START_SCREEN"
+msgid "Start screen"
+msgstr "Pantalla de inicio"
+
+msgctxt "UI_MENU_START_SCREEN_DESC"
+msgid ""
+"Automatic skips it when the game starts from Steam's Big Picture or Gaming Mode, as on a console. "
+"It still opens when the game files need setting up, after an error, or when you hold View / "
+"Select (Minus) at start."
+msgstr ""
+"Automática la omite cuando el juego se abre desde Big Picture o el modo Gaming de Steam, como en "
+"una consola. Igual se abre si hay que preparar los archivos del juego, después de un error, o si "
+"mantienes View / Select (Menos) al iniciar."
+
+msgctxt "UI_MENU_START_ALWAYS"
+msgid "Always"
+msgstr "Siempre"
+
+msgctxt "UI_MENU_START_SKIP"
+msgid "Skip"
+msgstr "Omitir"
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr "No se encuentran los archivos del juego"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+"La preparación dejó los archivos del juego en %s y ya no están ahí. Si están en una tarjeta o un "
+"disco, conéctalo; si los moviste, prepara el juego de nuevo aquí abajo y elige dónde están ahora."
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr "Encontradas en este equipo"
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr "Buscando tu copia en los lugares habituales..."
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
+msgstr "carpeta"

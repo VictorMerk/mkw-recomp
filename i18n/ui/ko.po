@@ -733,6 +733,16 @@ msgid ""
 "open. Applies at the next start."
 msgstr "Bluetooth로 Joy-Con 2와 Pro 컨트롤러 2를 사용합니다. 페어링하려면 게임을 연 채로 싱크로 버튼을 길게 누르세요. 다음 실행부터 적용됩니다."
 
+msgctxt "UI_MENU_DSU"
+msgid "Motion from a DSU server"
+msgstr ""
+
+msgctxt "UI_MENU_DSU_DESC"
+msgid ""
+"The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
+"Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
+msgstr ""
+
 msgctxt "UI_MENU_STICK_DEADZONE"
 msgid "Stick dead zone"
 msgstr "스틱 데드존"
@@ -837,6 +847,60 @@ msgstr "%s와(과) %s을(를) 교체했습니다"
 msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr "플레이어 %d명에게 각각 컨트롤러가 필요합니다: %d개 연결됨. 키보드는 플레이어 1만 사용할 수 있습니다."
+
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "컨트롤러"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "플레이어 %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"각 플레이어 컨트롤러의 배터리로, 컨트롤러가 알려주는 값입니다. 알려주지 않는 컨트롤러도 있습니다. 블루투스로 연결한 Switch 2 컨트롤러는 전압을 알려주며 높음, 보통, "
+"낮음으로 표시합니다."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "연결된 컨트롤러가 없습니다"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "낮음"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "보통"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "높음"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "충전 중"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "충전 완료"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "유선"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "배터리 정보 없음"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "플레이어 %d의 컨트롤러 배터리가 얼마 남지 않았습니다 (%s)"
 
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
@@ -2578,3 +2642,52 @@ msgstr "프로필 %s을(를) 제거할까요? 목록에서 사라지지만 세�
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "프로필을 저장하지 못했습니다(이유는 로그에 있습니다)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_SETUP_ERR_SPACE"
+msgid ""
+"not enough free space: the setup needs %s. Free some space, or choose \"Use it where it is\" for "
+"the RomFS, which needs no copy"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN"
+msgid "Start screen"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN_DESC"
+msgid ""
+"Automatic skips it when the game starts from Steam's Big Picture or Gaming Mode, as on a console. "
+"It still opens when the game files need setting up, after an error, or when you hold View / "
+"Select (Minus) at start."
+msgstr ""
+
+msgctxt "UI_MENU_START_ALWAYS"
+msgid "Always"
+msgstr ""
+
+msgctxt "UI_MENU_START_SKIP"
+msgid "Skip"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
+msgstr ""

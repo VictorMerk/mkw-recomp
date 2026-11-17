@@ -768,6 +768,16 @@ msgstr ""
 "Bluetooth üzerinden Joy-Con 2 ve Pro Controller 2. Eşleştirmek için oyun açıkken kumandanın Sync "
 "düğmesini basılı tutun. Bir sonraki açılışta uygulanır."
 
+msgctxt "UI_MENU_DSU"
+msgid "Motion from a DSU server"
+msgstr ""
+
+msgctxt "UI_MENU_DSU_DESC"
+msgid ""
+"The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
+"Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
+msgstr ""
+
 msgctxt "UI_MENU_STICK_DEADZONE"
 msgid "Stick dead zone"
 msgstr "Çubuk ölü bölgesi"
@@ -877,6 +887,60 @@ msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
 msgstr ""
 "%d oyuncunun her biri için bir kumanda gerekir: %d bağlı. Klavye yalnızca 1. oyuncu için sayılır."
+
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Kumandalar"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "Oyuncu %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+msgstr ""
+"Her oyuncunun kumandasının pili, kumandanın bildirdiği gibi. Bazı kumandalar bildirmez. Bluetooth "
+"ile bağlı bir Switch 2 kumandası bir voltaj bildirir; yüksek, orta veya düşük olarak gösterilir."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Kumanda bağlı değil"
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Düşük"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Orta"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Yüksek"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "Şarj oluyor"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Şarj oldu"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Kablolu"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Pil bilgisi yok"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "Oyuncu %d kumandasının pili bitmek üzere (%s)"
 
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
@@ -2656,3 +2720,52 @@ msgstr ""
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "Profil kaydedilemedi (nedeni günlükte)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_SETUP_ERR_SPACE"
+msgid ""
+"not enough free space: the setup needs %s. Free some space, or choose \"Use it where it is\" for "
+"the RomFS, which needs no copy"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN"
+msgid "Start screen"
+msgstr ""
+
+msgctxt "UI_MENU_START_SCREEN_DESC"
+msgid ""
+"Automatic skips it when the game starts from Steam's Big Picture or Gaming Mode, as on a console. "
+"It still opens when the game files need setting up, after an error, or when you hold View / "
+"Select (Minus) at start."
+msgstr ""
+
+msgctxt "UI_MENU_START_ALWAYS"
+msgid "Always"
+msgstr ""
+
+msgctxt "UI_MENU_START_SKIP"
+msgid "Skip"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr ""
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
+msgstr ""
