@@ -1,0 +1,16 @@
+# tests/launcher
+
+The setup, the installation selector and the Add to Steam of the start screen.
+
+| File | What it checks |
+|---|---|
+| `test_setup.py` | The setup's command lines and files from folders with spaces and accents: the compiler's path on its way to the shader step (issue #29), the resume without `--source` after an update, the update's version order and its clean-up of `*.old` files, the update that regenerates the code cleanup removed, NVIDIA's downloads fetched again when they arrive damaged (issue #207), a broken SM86 spec built again instead of reused (issue #325), and setup tools, unpacking and warm-up when the installation is separate from the launcher, including symlink/junction aliases of long installation paths and response-file paths with spaces, quotes and backslashes for Clang, Zig and lld-link |
+| `test_steam.py` | The Tools page's Add to Steam (`tools/prepare/steam.py`): the binary `shortcuts.vdf` read back as it was written (strings, ints, a 64-bit field, tags), an entry with the same executable replaced instead of doubled with the other shortcuts kept whole, a missing file created, and a pid file that is not there or is not a number reading as Steam closed |
+| `test_game_dir.py` | Installation selection and persistence, relative paths, UTF-8 length boundaries, trailing whitespace and quotes, environment overrides, settings saved in the chosen folder, library readiness before memory initialization, recovery from failed or invalid saved selections, and log-folder discovery with launcher fallbacks and active log destinations (`t_game_dir.c`, POSIX harness) |
+| `test_game_dir_windows.py` | The actual Windows selector compiled with Clang/MinGW, run natively or under Wine: UTF-16 root limits with room for derived filenames, ASCII/BMP/supplementary characters, prepared DLL discovery, rejection before persistence, relative-prefix counting and recovery from invalid saved paths (`t_game_dir.c`; skipped when the toolchain or runner is absent) |
+
+C sources the tests here build with the compiler at hand and run:
+
+| File | Built by | What it checks |
+|---|---|---|
+| `t_game_dir.c` | `test_game_dir.py`, `test_game_dir_windows.py` | Settings, installation discovery and log-folder discovery with real files and single-thread platform stubs; Windows uses UTF-16 file APIs and UTF-8 conversion through `wmain`; no game, SDL or GPU |

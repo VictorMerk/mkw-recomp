@@ -43,6 +43,7 @@
 #include "imgui_internal.h"   // RenderTextEllipsis
 #include "ui/launcher/launcher.h"
 #include "ui/launcher/launcher_backdrop.h"
+#include "ui/launcher/launcher_brand.h"
 #include "ui/launcher/launcher_logo.h"
 #include "ui/launcher/launcher_look.h"
 #include "ui/launcher/launcher_players.h"
@@ -682,18 +683,30 @@ static void page_main(float w, float h) {
     }
     ImGui::SetCursorScreenPos(ImVec2(left, h - 48 * s - lh));
     if (status_link(files)) L.page = PAGE_FILES;
-    // the project's GitHub page above the version, as a link (the repository's own name: nothing to translate)
+    // the project's GitHub page and Discord server above the version, as their marks (brand names: nothing to
+    // translate), GitHub on the right as the text link was
     {
-        char url[96], shown[96];
-        snprintf(url, sizeof url, "https://github.com/%s", repo());
-        snprintf(shown, sizeof shown, "github.com/%s", repo());
-        ImVec2 ts = ImGui::CalcTextSize(shown);
-        float y = h - 48 * s - lh - 2 * (lh + 6 * s);
-        ImGui::SetCursorScreenPos(ImVec2(w - edge - ts.x, y));
-        Hot g = hot_button("##github", ts);
-        if (g.cursor) focus_ring(ImVec2(w - edge - ts.x, y), ImVec2(w - edge, y + ts.y));
-        dl->AddText(ImVec2(w - edge - ts.x, y), mix(LOOK_HEADING, LOOK_TEXT, g.t), shown);
-        if (g.hit) SDL_OpenURL(url);
+        char github[96];
+        snprintf(github, sizeof github, "https://github.com/%s", repo());
+        struct {
+            Brand brand;
+            const char *id, *name, *url;
+        } links[] = {{BRAND_DISCORD, "##discord", "Discord", "https://discord.gg/8uYBkjQkEg"},
+                     {BRAND_GITHUB, "##github", "GitHub", github}};
+        float is = roundf(34 * s), gap = 18 * s;
+        float x = w - edge - 2 * is - gap, y = h - 48 * s - lh - 2 * (lh + 6 * s) - (is - lh) - 8 * s;
+        for (auto &k : links) {
+            ImVec2 a(x, y), b(x + is, y + is);
+            ImGui::SetCursorScreenPos(a);
+            Hot g = hot_button(k.id, ImVec2(is, is));
+            if (g.cursor) focus_ring(a, b);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", k.name);
+            ImTextureID t = launcher_brand_icon(L.ren, k.brand, (int)is);
+            if (t) dl->AddImage(t, a, b, ImVec2(0, 0), ImVec2(1, 1), mix(LOOK_HEADING, LOOK_TEXT, g.t));
+            else dl->AddText(a, mix(LOOK_HEADING, LOOK_TEXT, g.t), k.name);
+            if (g.hit) SDL_OpenURL(k.url);
+            x += is + gap;
+        }
     }
     intro_apply(dl, v0, intro(8));   // the lower left comes in last, after Quit's own intro(7)
     ImGui::End();
@@ -1798,6 +1811,7 @@ extern "C" int launcher_run(void) {
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
+    launcher_brand_free();
     backdrop_free();
     SDL_DestroyRenderer(L.ren);
     SDL_DestroyWindow(L.win);

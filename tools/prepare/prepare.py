@@ -87,7 +87,7 @@ from machine import (
     run,
     shader_jobs,
 )
-from shaderstep import shaders, spec_command, translator_key  # noqa: F401  (spec_command: tests/test_setup.py)
+from shaderstep import shaders, spec_command, translator_key  # noqa: F401  (spec_command: tests/launcher/test_setup.py)
 import update  # (ca_file)
 
 PREP_VERSION = 1  # bump when a step's output changes meaning: every step runs again

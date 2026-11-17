@@ -1,7 +1,7 @@
 # runtime/probes
 
 Self-tests of each subsystem, one command-line option each (`build/mkw --probe-…`). They come from totk-pc-recomp
-except `texpre_probe.c`, `fg_probe.c`, `fps_probe.c` and `discord_probe.c`.
+except `texpre_probe.c`, `fg_probe.c`, `fps_probe.c`, `discord_probe.c` and `clk_probe.c`.
 
 | File | Option | What it checks |
 |---|---|---|
@@ -11,6 +11,7 @@ except `texpre_probe.c`, `fg_probe.c`, `fps_probe.c` and `discord_probe.c`.
 | `fg_probe.c` | `--probe-framegen` | MKW's own: frame generation's passes (`vk_framegen.c`) on two pictures in `MKW_FG_PROBE` (from `tools/imagen/fg_check.py`), the frame halfway and the vectors of each level written back, and its GPU time |
 | `discord_probe.c` | `--probe-discord` | MKW's own: Discord Rich Presence (`core/presence`) against the Discord running on this machine: connects, shows each phase a few seconds, clears it |
 | `fps_probe.c` | `--probe-fps` | MKW's own: `MKW_FPS=auto`'s controller (`fps_auto.c`) on synthetic frame times: the interval each steady frame time settles on with no changes after, a loading hitch, a return to 60, stalls slower than any interval |
+| `clk_probe.c` | `--probe-gpu-clocks` | MKW's own: whether the driver lowers the GPU's clock in the gaps the race's chain leaves it idle: a fixed compute batch after CPU gaps of 0 to 50 ms, its GPU time (and amdgpu's core clock); with the runtime's device, so `MKW_GPU_CLOCKS` applies, and `MKW_CLK_FILL` keeps the GPU busy a share of each gap |
 | `gfx_abi_probe.c` | `--probe-gfx-abi` | Our objects fit in NVN's and the fields the game reads are where it expects them |
 | `gfx_window_probe.c` | `--probe-window` | Window present, vsync, focus, cursor and resize |
 | `kernel_probe.c` | `--probe-kernel` | Waits, wakeups, virtual cores and their arguments (cores 0-5), fibers (also one moved between threads) and translated code on four threads |

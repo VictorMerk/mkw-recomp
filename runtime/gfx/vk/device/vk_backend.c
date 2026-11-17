@@ -355,6 +355,7 @@ static void replay_main(void *arg) {
             free(it.reg);
         } else {
             replay_core();
+            vk_pstate_frame();
             uint64_t frame = __atomic_add_fetch(&gfx_counters.frames, 1, __ATOMIC_RELAXED);
             present_image(it.tex, it.has_crop ? it.crop : NULL, it.at, it.queued, frame, it.value);
             vk_tl_present(it.value, frame);

@@ -497,7 +497,7 @@ static float sample_at(Walk *w, int ch) {
             else {
                 /* the history carried from the buffer before runs to its last sample, which a pitch above 1 can step
                    over; not when that slot holds another buffer by now (its address). Then, or when the slot was
-                   refilled at the same address, the history is the one this walk reached in it (tests/c/t_adpcm.c:
+                   refilled at the same address, the history is the one this walk reached in it (tests/runtime/t_adpcm.c:
                    14 of 28.8 M samples without contexts). */
                 if (w->abuf >= 0 && w->abuf < 4 && w->abuf != (int32_t)w->index) {
                     const AudrenWaveBuffer *pb = &v->buffers[w->abuf];

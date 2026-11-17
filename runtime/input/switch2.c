@@ -4,7 +4,7 @@
 // stick calibration, gyro offset, features, then reports; the player lights are written once a second, since the link
 // drops after about ten seconds without a write from the host. Everything here runs on the transport's thread, but
 // for the gamepad's Rumble callback, which only stores the motors' values.
-// We own no such controller: what is checked without one is the protocol (tests/test_switch2.py).
+// We own no such controller: what is checked without one is the protocol (tests/runtime/test_switch2.py).
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
