@@ -1,7 +1,7 @@
 // Frame generation (MKW_FRAMEGEN=off|auto|2|3|4, off by default: the console does not do it): frames made between
 // the game's, from its last two, so a game at 30 fps is shown at 60 (2x) and one at 60 at 120 on a fast display.
 // MKW hands out no motion vectors, so the motion comes from the pictures (optical flow), on the present thread and the
-// GPU only: nothing on the game thread or the replay thread (docs/roadmap.md).
+// GPU only: nothing on the game thread or the replay thread (docs/project/roadmap.md).
 //
 // Per game frame (vk_fg_frame, the present thread, before the game frame's timeline value is signalled):
 //   1. the crop rectangle of the game's picture is copied into a picture of our own (the game draws over its own next

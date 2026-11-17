@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="docs/images/logo.svg" width="128" alt="mkw-recomp logo"></p>
 
 <h1 align="center">mkw-recomp</h1>
 
@@ -15,11 +15,12 @@
 <p align="center">
   <b><a href="https://github.com/adriadam10/mkw-recomp/releases">Releases</a></b> ·
   <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">Help wiki</a></b> ·
+  <b><a href="https://discord.gg/8uYBkjQkEg">Discord</a></b> ·
   <a href="CHANGELOG.md">Changelog</a> ·
   <a href="CONTRIBUTING.md">Contributing</a> ·
-  <a href="docs/research.md#sources">Sources</a> ·
-  <a href="docs/roadmap.md">Roadmap</a> ·
-  <a href="docs/performance.md">Performance</a> ·
+  <a href="docs/project/research.md#sources">Sources</a> ·
+  <a href="docs/project/roadmap.md">Roadmap</a> ·
+  <a href="docs/project/performance.md">Performance</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/issues">Issues</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/discussions">Discussions</a> ·
   <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">Archive</a>
@@ -60,7 +61,7 @@ Early, and moving fast. On 12/11/2026:
 
 ## Roadmap
 
-The main open work, in order; the details are in [docs/roadmap.md](docs/roadmap.md).
+The main open work, in order; the details are in [docs/project/roadmap.md](docs/project/roadmap.md).
 
 - **60 fps in races.** Today a race frame is a serial chain: the game finishes its frame (~3 ms\*), then the Vulkan
   back end records the game's big submit (~19 ms\*), then the GPU runs it (~10 ms\*), and only then does the next frame
@@ -77,7 +78,7 @@ The main open work, in order; the details are in [docs/roadmap.md](docs/roadmap.
 
 ## Performance
 
-Measured frame times, each with the version it ran, are in [docs/performance.md](docs/performance.md). To add your machine,
+Measured frame times, each with the version it ran, are in [docs/project/performance.md](docs/project/performance.md). To add your machine,
 open a [performance report](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml): it goes
 into the table with the version it reports. The times are the game's own frames: frame generation shows more frames
 but does not shorten them. 16.7 ms is 60 fps; Frame rate on Automatic (the console's) drops to 30 fps when 60 is out of
@@ -256,7 +257,7 @@ This project is under the [MIT License](LICENSE). Code taken from other projects
 (`LICENSE.*` files in [recomp/](recomp/), [runtime/](runtime/), [sm86/decode/](sm86/decode/) and
 [runtime/third_party/](runtime/third_party/README.md)): totk-pc-recomp, nvsass-disassembler, Dear ImGui, bc7enc,
 stb_image, AMD FidelityFX FSR 1 and Roboto. Every source used, with its license and what was taken from it (code from MIT
-projects only; from GPL projects, ideas only), is listed in [docs/research.md](docs/research.md#sources).
+projects only; from GPL projects, ideas only), is listed in [docs/project/research.md](docs/project/research.md#sources).
 
 Mario Kart World is © Nintendo. This project is not affiliated with or endorsed by Nintendo, contains no game code
 or assets, and does not help to obtain them.

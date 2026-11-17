@@ -31,6 +31,9 @@ int input_pad_read(uint64_t *buttons, int32_t *lx, int32_t *ly);
 // input, the gamepad when one is connected. Any thread.
 enum { INPUT_DEVICE_KEYBOARD = 1, INPUT_DEVICE_PAD = 2 };
 int input_last_device(void);
+// The open gamepad's default left stick dead zone in % when MKW_STICK_DEADZONE is unset (an Xbox pad's is Microsoft's,
+// not the 8 % of the settings table); -1 without a gamepad. Any thread.
+double input_stick_deadzone_default(void);
 // The gamepad layout in effect (PAD_LAYOUT_*, input_map.h; MKW_PAD_LAYOUT, live); -1 without a gamepad. Any thread.
 int input_pad_layout(void);
 // The label on a face button of the open gamepad (input_map.h PAD_SOUTH..PAD_NORTH, as SDL reports it); PAD_LABEL_NONE for another

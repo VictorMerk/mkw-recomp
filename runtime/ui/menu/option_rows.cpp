@@ -18,6 +18,7 @@
 
 extern "C" {
 #include "cfg.h"
+#include "input.h"
 #include "platform/platform.h"
 #include "ui_text.h"
 // host.h pulls in cpu.h, which is C only: the one function needed from it, as declared there.
@@ -349,6 +350,11 @@ bool opt_choice(const char *key, UiTextId label, const UiTextId *names, int n, U
 bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId desc, float step, const char *fmt) {
     const CfgMeta *m = cfg_meta(key);
     double v = cfg_double(key), def = m ? strtod(m->def, NULL) : lo;
+    if (!strcmp(key, "MKW_STICK_DEADZONE")) {   // unset: the open gamepad's own default (an Xbox pad's is not 8 %)
+        const char *set = cfg_get(key);
+        double d = input_stick_deadzone_default();
+        if (!(set && *set) && d >= 0) v = def = d;
+    }
     char shown[48];
     snprintf(shown, sizeof shown, fmt, v);
     RowView rv = {shown, fabs(v - def) < step * 0.01, true, NULL};

@@ -36,6 +36,7 @@ static volatile int32_t pad_labels[4];  // ... and the labels of its south, east
 static int pad_east_a;               // ... and labels its east face button A (Nintendo layout under MKW_PAD_LAYOUT=auto)
 static int pad_layout = -1;          // PAD_LAYOUT_* in effect for the open gamepad, -1 to pick again; live (cfg_version)
 static unsigned pad_layout_seen;
+static volatile int32_t pad_dz_shown = -1;       // the open gamepad's default left dead zone in tenths of a %, for the menu (any thread), -1 none
 static volatile int32_t pad_layout_shown = -1;   // pad_layout for the menu (any thread), -1 without a gamepad
 static volatile int32_t last_device;           // INPUT_DEVICE_* the player used last, 0 none yet (input_last_device)
 static SDL_JoystickID sensor_pad[8]; // by player: the gamepad whose sensors the motion thread set up, 0 none
@@ -104,13 +105,29 @@ static float dead_zone_get(void) {
     return dead_zone;
 }
 
-// A stick's two axes (SDL's, y down) as the game's (y up): a round dead zone around the centre, and the tilt past it
+// The dead zone of a gamepad's stick (right: the right one). MKW_STICK_DEADZONE when the player set it; else, for an
+// Xbox controller, Microsoft's own values for its sticks (XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE 7849 and _RIGHT_ 8689 of
+// 32767: 24 % and 26.5 %), which do not come back to the centre as a Nintendo stick does. An Xbox Elite Series 2 on
+// Linux (xone, 17/11/2026) came to rest at 11-21 % of full tilt after a release and stayed there, the same value for up
+// to 7.6 s (an input recording): past the 8 % default the course select's cursor kept going on its own, in whichever
+// direction the stick settled; at 25 it stopped. Steam's virtual gamepad (Steam Input, Big Picture) is left at the
+// default: Steam has applied its own dead zone already.
+static float dead_zone_for(SDL_Gamepad *g, int right) {
+    const char *set = cfg_get("MKW_STICK_DEADZONE");
+    if (set && *set) return dead_zone_get();
+    SDL_GamepadType t = SDL_GetGamepadType(g);
+    if ((t == SDL_GAMEPAD_TYPE_XBOX360 || t == SDL_GAMEPAD_TYPE_XBOXONE) && SDL_GetGamepadVendor(g) != 0x28de)
+        return (right ? 8689 : 7849) / (float)STICK_MAX;
+    return dead_zone_get();
+}
+
+// A stick's two axes (SDL's, y down) as the game's (y up): a round dead zone d around the centre, and the tilt past it
 // rescaled to the whole range, so a worn stick that rests off centre stays still without losing the small moves just
 // outside it (the old one was per axis, 2500 of 32767, and jumped from 0 to 2500).
-static void stick(int16_t x, int16_t y, int32_t out[2]) {
+static void stick(int16_t x, int16_t y, float d, int32_t out[2]) {
     float fx = (x < -STICK_MAX ? -STICK_MAX : x) / (float)STICK_MAX;
     float fy = (y < -STICK_MAX ? -STICK_MAX : y) / (float)STICK_MAX;
-    float m = sqrtf(fx * fx + fy * fy), d = dead_zone_get();
+    float m = sqrtf(fx * fx + fy * fy);
     if (m <= d) {
         out[0] = out[1] = 0;
         return;
@@ -139,6 +156,7 @@ static void scan_pads(void) {
     if (pad && !SDL_GamepadConnected(pad)) {
         SDL_CloseGamepad(pad); pad = NULL; sensor_pad[0] = 0; sensor_ok[0] = 0;
         plat_xchg32(&pad_layout_shown, -1);
+        plat_xchg32(&pad_dz_shown, -1);
         for (int i = 0; i < 4; i++) plat_xchg32(&pad_labels[i], PAD_LABEL_NONE);
         rt_log("input: gamepad disconnected");
     }
@@ -186,6 +204,10 @@ static void pad_adopt(void) {
     int motion = SDL_GamepadHasSensor(pad, SDL_SENSOR_GYRO) && SDL_GamepadHasSensor(pad, SDL_SENSOR_ACCEL);
     rt_log("input: gamepad \"%s\" (%s, %s, east button %s)", SDL_GetGamepadName(pad), pad_rumble ? "rumble" : "no rumble",
            motion ? "gyro and accelerometer" : "no motion sensors", pad_east_a ? "labelled A" : "not labelled A");
+    const char *set = cfg_get("MKW_STICK_DEADZONE");
+    plat_xchg32(&pad_dz_shown, (int32_t)lroundf(dead_zone_for(pad, 0) * 1000));
+    rt_log("input: stick dead zones %.1f %% left, %.1f %% right (%s)", dead_zone_for(pad, 0) * 100,
+           dead_zone_for(pad, 1) * 100, set && *set ? "MKW_STICK_DEADZONE" : "this controller's default; MKW_STICK_DEADZONE sets one");
 }
 
 // Under lock: the layout of the open gamepad, picked again when a setting or the gamepad changed; logs each change.
@@ -289,8 +311,8 @@ static void gamepad_read(SDL_Gamepad *g, int layout, uint64_t *b, int32_t sl[2],
     uint8_t pd[PAD_COUNT] = {0};
     gamepad_physical(g, pd);
     *b |= input_map_pad_buttons(pd, layout);
-    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTY), sl);
-    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTY), sr);
+    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTY), dead_zone_for(g, 0), sl);
+    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTY), dead_zone_for(g, 1), sr);
 }
 
 // Under lock, state 1: player 1's gamepad inputs by position; 0 without a connected gamepad.
@@ -471,6 +493,11 @@ int input_last_device(void) {
     int d = (int)plat_cas32(&last_device, 0, 0);
     if (d) return d;
     return (int32_t)plat_cas32(&pad_layout_shown, -1, -1) >= 0 ? INPUT_DEVICE_PAD : INPUT_DEVICE_KEYBOARD;
+}
+
+double input_stick_deadzone_default(void) {
+    int32_t v = (int32_t)plat_cas32(&pad_dz_shown, -1, -1);
+    return v < 0 ? -1 : v / 10.0;
 }
 
 int input_pad_layout(void) {

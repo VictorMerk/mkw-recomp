@@ -258,7 +258,7 @@ static void host_aspect(Cpu *c) {
 // In place of the bl to nn::ui2d::DrawInfo's projection getter (main+0x1682c9c: the 4x4 at [x0+0x10] to [x1]) from the
 // two draw constant-buffer setups of the 2D layouts: the same copy, and a 16:9 projection gets its x row narrowed by
 // 16:9 over the output's aspect, so the 2D keeps its shape in the middle 16:9 of a wider picture: the idea of oot-mod's
-// 2D canvas hook (craftycorvid/oot-mod c5ccd1c, MIT; docs/research.md). MKW's layouts are drawn in perspective (uw6-menu: rows 1.358 0 0 0 /
+// 2D canvas hook (craftycorvid/oot-mod c5ccd1c, MIT; docs/project/research.md). MKW's layouts are drawn in perspective (uw6-menu: rows 1.358 0 0 0 /
 // 0 2.414 0 0 / 0 0 -1.0002 1301.94 / 0 0 -1 1303.68, 45 degrees at 16:9), not through the orthographic cameras of
 // main+0x460c10 (uw5-menu: none of those calls). Row-major, x row first: x and y unskewed, its aspect m[5] / m[0].
 static int is_16x9(const float *m) {

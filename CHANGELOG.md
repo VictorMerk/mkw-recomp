@@ -1,6 +1,6 @@
 # Changelog
 
-Each version's section is that release's notes: `tools/build/notes.py` puts it into `docs/release-template.md` (install,
+Each version's section is that release's notes: `tools/build/notes.py` puts it into `docs/project/release-template.md` (install,
 updating, known issues, reporting) for the GitHub release. A section has a summary paragraph, `### Changes` (each with
 its issue, #N), `### Tested` (what was run from the packages before publishing) and optionally `### Known issues`.
 
@@ -521,7 +521,7 @@ Galician and Basque, 5.1 sound, and fixes for crashes and freezes reported since
 - **Languages**: the menu (F1), the start screen and the setup page in English, Japanese, French, German, Italian,
   Spanish (Spain and Latin America), Dutch, Portuguese (Portugal and Brazil), Russian, Simplified and Traditional
   Chinese, Korean, Catalan, Galician, Basque, Polish, Turkish and Ukrainian; Automatic follows the system's language.
-  These first translations are ours: corrections from native speakers are very welcome (`i18n/*.po`, by pull request).
+  These first translations are ours: corrections from native speakers are very welcome (`i18n/ui/*.po`, by pull request).
   The setup's errors (a folder without the game, an encrypted or other version, an incomplete copy) are shown in the
   menu language.
 - **The game in Catalan, Galician and Basque**: Settings > Game > Language. The game's own texts are rebuilt from your

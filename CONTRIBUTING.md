@@ -9,7 +9,7 @@
   all of that is regenerated in `build/` from each user's own copy. `tools/git/pre-commit` refuses the generated
   code's marker and the game's files; install it with `git config core.hooksPath tools/git`.
 - **Licenses.** Code may be taken from MIT-compatible projects only, naming the source and commit in the code and in
-  the table of [docs/research.md](docs/research.md#sources) in the same pull request. From GPL projects (eden-nx2,
+  the table of [docs/project/research.md](docs/project/research.md#sources) in the same pull request. From GPL projects (eden-nx2,
   oboromi, Eglantine…) and from projects without a license, ideas only, never code.
 - **The console's behaviour by default.** Anything for weaker hardware (lower resolution, caps, quality presets) is an
   option whose default is what the console does.
