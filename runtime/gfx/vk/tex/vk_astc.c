@@ -401,6 +401,7 @@ static void mem_barrier(VkCommandBuffer cb, VkPipelineStageFlags2 src, VkAccessF
 // over the world map menu, run-bc7-0 to run-bc7-3: at least 16 textures each). Each is one chunk (CHUNK_OUT) and is
 // freed with its upload batch.
 static VmaAllocator svma_;
+static PlatOnce svma_once = PLAT_ONCE_INIT;
 
 static void svma_init(void *arg) {
     (void)arg;
@@ -411,8 +412,7 @@ static void svma_init(void *arg) {
 }
 
 static VmaAllocator svma(void) {
-    static PlatOnce once = PLAT_ONCE_INIT;
-    plat_once(&once, svma_init, NULL);
+    plat_once(&svma_once, svma_init, NULL);
     return svma_ ? svma_ : vk_ctx()->vma;
 }
 
@@ -718,6 +718,11 @@ void vk_astc_release(void) {
         if (fx_buf) vmaDestroyBuffer(svma(), fx_buf, fx_alloc);
     }
     fx_buf = VK_NULL_HANDLE, fx_alloc = NULL, fx_tried = 0;
+    // Upload batches have drained before device teardown. Freeing their allocations and the fixed scratch alone
+    // leaves VMA's cached VkDeviceMemory alive (probe-astc: VUID-vkDestroyDevice-device-05137 on RX570/Windows).
+    if (svma_) vmaDestroyAllocator(svma_);
+    svma_ = NULL;
+    svma_once = (PlatOnce)PLAT_ONCE_INIT;   // a later device must create its own allocator, never reuse this device's
     memset(&G.dsl, 0, sizeof G - offsetof(__typeof__(G), dsl));
     G.dev = VK_NULL_HANDLE;
     G.mode = -1;

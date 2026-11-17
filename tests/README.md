@@ -6,6 +6,8 @@ end's regression test runs over captures instead (`tools/test/`).
 | File | What it checks |
 |---|---|
 | `test_memwatch.py` | Native Windows process-memory collection: observes an allocated 64 MiB increase, preserves existing logs, leaves the target running, and exits when the target exits; no game needed, skipped on other hosts |
+| `test_gamelib_id.py` | Canonical and legacy CRLF header hashes, invalidation after header/flag changes, and the actual library guard's ABI, table-bound and sidecar checks with synthetic data |
+| `test_lan_peers.py` | Actual LAN socket overrides with owned UDP sockets: opt-in, peer filtering and refresh, loopback binding, broadcast fanout, direct-send isolation, public-address rejection and timestamped diagnostics without payloads; Linux and Windows (Microsoft CRT or MinGW) |
 | `test_warp32.py` | Executes the translator's actual shuffle/ballot helpers and emitted signed/unsigned reductions as C++ on synthetic 32/64/128-lane subgroups, with distinct values per logical warp and partially active masks |
 | `test_spirv_images.py` | Integer image variants of synthetic compute shaders through the production patcher (`c/t_spirv_images.c`): signed and unsigned storage images, separate image/sampler construction, input preservation and actionable failure reasons; optional SPIR-V validation |
 | `test_setup.py` | The setup's command lines and files from folders with spaces and accents: the compiler's path on its way to the shader step (issue #29), the resume without `--source` after an update, the update's version order and its clean-up of `*.old` files, the update that regenerates the code cleanup removed, NVIDIA's downloads fetched again when they arrive damaged (issue #207), a broken SM86 spec built again instead of reused (issue #325), and setup tools, unpacking and warm-up when the installation is separate from the launcher, including symlink/junction aliases of long installation paths and response-file paths with spaces, quotes and backslashes for Clang, Zig and lld-link |
@@ -16,6 +18,10 @@ end's regression test runs over captures instead (`tools/test/`).
 | `test_flow.py` | Shapes of control flow ptxas leaves that the translator must structure as the branch graph runs them (`sm86/translate/flow.py`, checked with `flow_sim`): a jump into a tail that an if / else shares |
 | `test_ui_text.py` | The menu's text catalogs (`i18n/`): the English template has every id of `ui_text.h`, each `.po` is up to date with it, and each translation keeps the English's printf conversions in order (a swapped `%s`/`%d` would make printf read the wrong argument) |
 | `test_switch2.py` | The Switch 2 controllers' Bluetooth LE protocol (`runtime/input/switch2_proto.h`): mkw-neo's test (`c/t_switch2.c`, reports recorded from real Joy-Con 2s) built against our copy |
+| `test_aspect.py` | Window aspect, horizontal FOV, UI fitting and unchanged 16:9/wide/version defaults |
+| `test_vertplus.py` | The actual late race-FOV hook over repeated requests and tall render-target dimensions |
+| `test_vertplus_gate.py` | Old game tables without the separate FOV set fail closed to 16:9 |
+| `test_ui_capture.py` | Actual draw hook, full-canvas backdrops, character/kart masks, cup backdrop, ordinary controls and movies |
 | `test_mods.py` | Code patches shipped by mods (`recomp/patches.py` `load_mods`): a mod with spans only, two mods on one address stop the generate, no `mods/` folder leaves the table as it was |
 | `test_cfg.py` | Every setting the in-game menu writes to `mkw.ini` is a key `runtime/core/base/cfg.c` reads back (#168: `HDR` was dropped as unknown) |
 | `test_defaults.py` | The memory caps a player gets with nothing set (`runtime/gfx/vk/device/vk_defaults.c`), built alone and checked on the GPUs players reported: the Radeon 660M keeps its measured caps, a large discrete GPU is not held to them (issue #31) |

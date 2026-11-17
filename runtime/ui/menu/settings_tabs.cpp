@@ -574,6 +574,7 @@ static void tab_hacks(float scale) {
     opt_choice("MKW_QUICK_RACE", UI_MENU_QUICK_RACE, quick, 4, UI_MENU_QUICK_RACE_DESC);
     opt_toggle("MKW_FREEZE_KEYS", UI_MENU_FREEZE_KEYS, UI_MENU_FREEZE_KEYS_DESC);
     opt_toggle("MKW_CLASSIC_GP", UI_MENU_CLASSIC_GP, UI_MENU_CLASSIC_GP_DESC);
+    opt_toggle("MKW_CLASSIC_VS", UI_MENU_CLASSIC_VS, UI_MENU_CLASSIC_VS_DESC);
     opt_end();
 }
 

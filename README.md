@@ -77,9 +77,9 @@ The main open work, in order; the details are in [docs/roadmap.md](docs/roadmap.
 
 ## Performance
 
-Measured frame times, each with its date, are in [docs/performance.md](docs/performance.md). To add your machine,
+Measured frame times, each with the version it ran, are in [docs/performance.md](docs/performance.md). To add your machine,
 open a [performance report](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml): it goes
-into the table with the date of the report. The times are the game's own frames: frame generation shows more frames
+into the table with the version it reports. The times are the game's own frames: frame generation shows more frames
 but does not shorten them. 16.7 ms is 60 fps; Frame rate on Automatic (the console's) drops to 30 fps when 60 is out of
 reach, and a frame over 33.3 ms runs the race slower than real time.
 

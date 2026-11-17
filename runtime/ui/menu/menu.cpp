@@ -611,7 +611,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     if (g_test.next_set < g_test.n_sets && frame >= g_test.sets[g_test.next_set].frame) test_apply_sets(frame);
     if (g_perf_save.exchange(0)) cfg_save();
     perf_tick(plat_now_ns(), frame, t);
-    classic_poll();   // MKW_CLASSIC_GP changed: the cups in the game's memory (core/hacks/classic.c)
+    classic_poll();   // MKW_CLASSIC_GP or _VS changed: the cups and routes in the game's memory (core/hacks/classic.c)
     bool open = g_open.load(std::memory_order_relaxed);
     if (!open) {
         if (g_save_pending) g_save_pending = opt_save_tick(1);   // closed: the last change goes to mkw.ini now

@@ -682,6 +682,19 @@ static void page_main(float w, float h) {
     }
     ImGui::SetCursorScreenPos(ImVec2(left, h - 48 * s - lh));
     if (status_link(files)) L.page = PAGE_FILES;
+    // the project's GitHub page above the version, as a link (the repository's own name: nothing to translate)
+    {
+        char url[96], shown[96];
+        snprintf(url, sizeof url, "https://github.com/%s", repo());
+        snprintf(shown, sizeof shown, "github.com/%s", repo());
+        ImVec2 ts = ImGui::CalcTextSize(shown);
+        float y = h - 48 * s - lh - 2 * (lh + 6 * s);
+        ImGui::SetCursorScreenPos(ImVec2(w - edge - ts.x, y));
+        Hot g = hot_button("##github", ts);
+        if (g.cursor) focus_ring(ImVec2(w - edge - ts.x, y), ImVec2(w - edge, y + ts.y));
+        dl->AddText(ImVec2(w - edge - ts.x, y), mix(LOOK_HEADING, LOOK_TEXT, g.t), shown);
+        if (g.hit) SDL_OpenURL(url);
+    }
     intro_apply(dl, v0, intro(8));   // the lower left comes in last, after Quit's own intro(7)
     ImGui::End();
     ImGui::PopStyleVar(2);

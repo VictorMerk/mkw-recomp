@@ -13,8 +13,19 @@
 
 static const RtGame *game;
 
+static int id_matches(const char *id, size_t size) {
+    if (!id) return 0;
+    if (size == strlen(RT_GAME_ID) && !memcmp(id, RT_GAME_ID, size)) return 1;
+#ifdef RT_GAME_ID_LEGACY_CRLF
+    // Same headers and flags, hashed before Windows checkout line endings were normalized (build.py).
+    if (size == strlen(RT_GAME_ID_LEGACY_CRLF) && !memcmp(id, RT_GAME_ID_LEGACY_CRLF, size)) return 1;
+#endif
+    return 0;
+}
+
 static const char *check(const RtGame *g) {
-    if (g->abi != RT_GAME_ABI || !g->id || strcmp(g->id, RT_GAME_ID)) return "built for another version of the runtime";
+    if (g->abi != RT_GAME_ABI || !id_matches(g->id, g->id ? strlen(g->id) : 0))
+        return "built for another version of the runtime";
     if (g->nmodules < 1 || g->nmodules > RT_MAX_MODULES || g->npatch_sets > RT_MAX_PATCH_SETS) return "malformed";
     return NULL;
 }
@@ -68,7 +79,9 @@ int rt_game_present(void) {
     snprintf(path, sizeof path, "%s/mkwgame.id", cfg_game_dir());
     uint64_t size = 0;
     char *id = (char *)plat_file_read(path, &size);
-    int ok = id && size >= strlen(RT_GAME_ID) && !strncmp(id, RT_GAME_ID, strlen(RT_GAME_ID));
+    // The sidecar is a line of text; the actual DLL's table id still has to match exactly in check().
+    while (id && size && (id[size - 1] == '\n' || id[size - 1] == '\r')) size--;
+    int ok = id_matches(id, size);
     free(id);
     return ok;
 }

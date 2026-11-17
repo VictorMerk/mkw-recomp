@@ -87,6 +87,7 @@ typedef struct VkExec {
     NVNbufferRange vbuf[16];             // OP_BIND_VBUF
     p_bind_buf ubo[NVN_BIND_STAGES][18], ssbo[NVN_BIND_STAGES][16];   // OP_BIND_UBO / OP_BIND_SSBO per stage and index
     uint64_t tex[NVN_BIND_STAGES][128], samp[NVN_BIND_STAGES][128], img[NVN_BIND_STAGES][32];   // OP_BIND_TEX / OP_BIND_SAMP / OP_BIND_IMG handles per stage
+    uint8_t c24[NVN_BIND_STAGES][NVN_C24_BYTES];   // OP_PUSH_CONST: the driver's push-constant bank c24 per stage; never pushed reads zero
 
     // ---- vk_exec_xfer.c slots (render enable, conditional rendering): left empty by vk_exec.c
     int render_disabled;                 // OP_RENDER_ENABLE false or a failed OP_RENDER_COND: clears and draws skip
@@ -222,6 +223,7 @@ void vk_c0_fill(uint8_t bank[VK_C0_BYTES], int stage, const p_bind_buf ssbo[16],
 // alone (1 when op is one); a chunk's start (its state becomes this thread's, x_cur) and end (pass ended, a full barrier,
 // its views freed at its fence, x_cur cleared).
 int vk_exec_op(VkExec *ex, const op_hdr *h);
+void vk_exec_drew(VkExec *ex);   // after a draw vk_exec_op recorded outside walk: the split check
 int vk_exec_state_op(VkExec *ex, uint32_t op, const void *a);
 // seen_depth: the depth images earlier chunks bound (nseen -1: unknown), which clear layer by layer (dc_layered)
 void vk_exec_chunk_begin(VkExec *ex, const VkImage *seen_depth, int nseen);
@@ -239,7 +241,8 @@ typedef struct {
 } VkExecQueues;
 int vk_exec_queue_swap(VkExecQueues *t, VkExec *ex, uint64_t id);
 // vk_exec_par.c: called by vk_exec_record before it walks; 1 when it recorded and submitted the submission's ops as
-// chunks (ex then holds the state after the last op and a new command buffer for the rest); 0: walk as usual. diag: a
+// chunks (ex then holds the state after the last op and a new command buffer for the rest); 2 when it recorded them
+// serially itself (a serial head that the rest of the submission did not follow in chunks); 0: walk as usual. diag: a
 // diagnosis that times ops or passes is on (chunks stay off). vk_exec_par_log: the perf line (MKW_TRACE=perf).
 int vk_exec_par(VkExec *ex, const uint64_t *handles, int n, int diag);
 void vk_exec_par_log(void);

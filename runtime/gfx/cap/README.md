@@ -17,5 +17,8 @@ Variables: `MKW_CAPTURE=1` (wrap; without it nothing changes), `MKW_CAPTURE_AT=<
 The populated pages come from `PAGEMAP_SCAN` on Linux and the committed runs (`VirtualQuery`) on Windows, where guest
 memory is committed when first touched (`plat_mem_populated`). What only the GPU holds goes
 too: texture images written by the GPU (`vk_texture_gpu_content`) and chunks of physical pools (`vk/vk_mem_cap.c`).
+An ASTC texture whose image holds decoded texels (RGBA8, BC7 or BC1) goes as that image's own bytes
+(`vk_texture_decoded`), since no ASTC blocks can be read back from it; a replay whose image has another format (another
+`MKW_ASTC_*` setting or GPU) leaves it out and says so.
 `--replay` applies the game's depth mode and shows no window. Frame diagnostics count the replay's own presents:
 `MKW_DUMP=3` is a 3-frame capture's last frame, whatever present number its PNG carries.
