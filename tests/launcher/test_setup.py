@@ -502,3 +502,24 @@ def test_damaged_generated_c_raises_to_regenerate(tmp_path: Path) -> None:
     assert gamecode.compile_one(["cc"], [], src, out, stamp, "k").startswith("main_0203.c: ")
     src.write_text("int x = 1;\n")
     assert gamecode.compile_one(["cc"], [], src, out, stamp, "k") == "" and stamp.read_text() == "k"
+
+
+def test_space_checked_before_copying(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """gamecopy.check_space: a drive with less free than the setup needs fails with code "space" (the start screen's
+    translated text) and what is needed and free; enough passes; what a cut copy left is not needed again."""
+    import gamecopy
+
+    src = tmp_path / "dump/romfs"
+    src.mkdir(parents=True)
+    (src / "a.bin").write_bytes(b"x" * 3000)
+    (src / "b.bin").write_bytes(b"x" * 1000)
+    assert gamecopy.romfs_bytes(src) == 4000 and gamecopy.romfs_bytes(tmp_path / "missing") == 0
+    done = tmp_path / "game/romfs"
+    done.mkdir(parents=True)
+    (done / "a.bin").write_bytes(b"x" * 3000)
+    assert gamecopy.romfs_bytes(src) - gamecopy.tree_bytes(done) == 1000
+    monkeypatch.setattr(gamecopy.shutil, "disk_usage", lambda p: SimpleNamespace(free=2 * gamecopy.GIB))
+    gamecopy.check_space(tmp_path / "game/not yet", 2 * gamecopy.GIB)
+    with pytest.raises(gamecopy.Failed) as e:
+        gamecopy.check_space(tmp_path / "game", 5 * gamecopy.GIB)
+    assert e.value.code == "space" and e.value.detail.startswith("5.0 GB, 2.0 GB free in ")

@@ -13,6 +13,7 @@
 #include <SDL3/SDL.h>
 
 #include "cfg.h"
+#include "dsu.h"
 #include "hacks.h"
 #include "host.h"
 #include "input.h"
@@ -608,10 +609,15 @@ int input_motion_enabled(void) {
 }
 
 // 250 Hz: the gamepads update (reports read, rumble expiry) and each player's newest gyro and accelerometer sample goes
-// into that player's fusion. Players 2-8 have their own (#302: player 2's gyro did nothing). Without a gamepad with
-// sensors, or with motion off (MKW_MOTION=0, live), nothing is fed and the six-axis sensor reads at rest.
+// into that player's fusion. Players 2-8 have their own (#302: player 2's gyro did nothing). A player whose gamepad has
+// no sensors (an XInput pad) or who has none takes a DSU server's instead when MKW_DSU=1 (dsu.c, #435): player N the
+// server's slot MKW_DSU_SLOT + N - 1. Without either, or with motion off (MKW_MOTION=0, live), nothing is fed and the
+// six-axis sensor reads at rest.
 static void motion_main(void *arg) {
     (void)arg;
+    int source[INPUT_MAX_PLAYERS] = {0};   // what fed each player last: 0 nothing, 1 its gamepad, 2 DSU (for the log)
+    int first_slot = 0;                    // MKW_DSU_SLOT, live
+    unsigned slot_seen = ~0u;
     _Static_assert(sizeof sensor_pad / sizeof sensor_pad[0] == INPUT_MAX_PLAYERS, "one sensor slot per player");
     for (;;) {
         plat_wait_ns(4000000);
@@ -628,11 +634,18 @@ static void motion_main(void *arg) {
         plat_mutex_unlock(&lock);
         if (!input_motion_enabled()) continue;
         uint64_t now = kern_now_ns();
+        if (slot_seen != cfg_version()) slot_seen = cfg_version(), first_slot = cfg_int("MKW_DSU_SLOT");
         for (int p = 0; p < INPUT_MAX_PLAYERS; p++) {
-            if (!have[p]) continue;
             double acc[3], gyro[3];
-            input_motion_axes(a[p], g[p], acc, gyro);
-            motion_feed(motion_player(p), acc, gyro, now);
+            int from = 0;   // 1 the gamepad's own sensors, 2 the DSU server (dsu.c), 0 none
+            if (have[p]) input_motion_axes(a[p], g[p], acc, gyro), from = 1;
+            else if (dsu_motion(first_slot + p, acc, gyro)) from = 2;
+            if (from != source[p]) {
+                if (from == 2) rt_log("input: player %d motion from DSU slot %d", p + 1, first_slot + p);
+                else if (source[p] == 2) rt_log("input: player %d: DSU slot %d stopped sending", p + 1, first_slot + p);
+                source[p] = from;
+            }
+            if (from) motion_feed(motion_player(p), acc, gyro, now);
         }
     }
 }
@@ -646,6 +659,7 @@ void input_motion_start(void) {
         else {
             if (!plat_thread_spawn(motion_main, NULL, "motion", 0)) rt_fatal("input: cannot start the motion thread");
             motion_thread = 1;
+            dsu_start();   // its own thread, idle until MKW_DSU=1 (live)
         }
     }
     plat_mutex_unlock(&lock);

@@ -71,7 +71,8 @@ uint16_t rumble_motor(float a, float curve, float strength);
 int input_rumble_triggers_enabled(void);
 
 // Motion (MKW_MOTION=0 turns it off, live). input_motion_start starts the sensor thread once: every 4 ms it reads the
-// gamepad's gyro and accelerometer (when it has them) and feeds motion_global(). Callable from any thread.
+// gamepad's gyro and accelerometer (when it has them, else a DSU server's with MKW_DSU=1, dsu.h) and feeds each
+// player's motion_player(). Callable from any thread.
 void input_motion_start(void);
 // MKW_MOTION is not "0" (a live setting: read again when cfg_version changes). Off: the sensor reads at rest.
 int input_motion_enabled(void);

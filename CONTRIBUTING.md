@@ -8,6 +8,10 @@
 - **Nothing of the game in the repository.** No game code, assets, keys, dumps, or C or SPIR-V generated from them:
   all of that is regenerated in `build/` from each user's own copy. `tools/git/pre-commit` refuses the generated
   code's marker and the game's files; install it with `git config core.hooksPath tools/git`.
+- **No keys and no decryption.** Setup works only from a dump that is already decrypted (folders, `.nup` or `.nx`).
+  Formats that need the console's keys to be read (NSP, XCI, NCA, NSZ, XCZ) are not supported, and neither is code
+  that asks the user for keys or a keyset or runs a tool that decrypts with them (NSTool, hactool…). Pull requests that
+  add them are closed.
 - **Licenses.** Code may be taken from MIT-compatible projects only, naming the source and commit in the code and in
   the table of [docs/project/research.md](docs/project/research.md#sources) in the same pull request. From GPL projects (eden-nx2,
   oboromi, Eglantine…) and from projects without a license, ideas only, never code.

@@ -17,6 +17,9 @@ folder has a README that names each file: read it before opening the code. The o
   services). If a fix seems to need one, it is the wrong fix.
 - **Nothing of the game in git.** No game code, assets, keys or anything generated from them (C, SPIR-V, dumps,
   screenshots of the game). Generated output lives in `build/`. Install the hook: `git config core.hooksPath tools/git`.
+- **No keys, no decryption.** Setup reads only an already decrypted dump (folders, `.nup`, `.nx`). Formats that need
+  console keys to read (NSP, XCI, NCA, NSZ, XCZ) are not accepted, nor code that asks for keys, a keyset or a tool that
+  decrypts with them (NSTool, hactool). Such pull requests are closed.
 - **Licenses.** Copy code only from MIT-compatible projects, citing source and commit in the code and in
   [docs/project/research.md](docs/project/research.md#sources). From GPL projects (eden-nx2, oboromi, Eglantine) and unlicensed ones,
   ideas only.

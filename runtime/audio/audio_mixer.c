@@ -8,7 +8,8 @@
 // into its destination mix, folds the submixes, runs the mix effects and writes the device sink's stereo mix into a
 // single-producer single-consumer ring. The SDL audio thread drains that ring without taking any lock: an empty ring
 // plays silence and never blocks the render thread or the guest. MKW_AUDIO=none (or MKW_AUDIO_OFF) mixes without a
-// device; MKW_AUDIO_PREFILL_MS (0..500, default 20) is the queued audio the output waits for after start or underrun.
+// device; MKW_AUDIO_PREFILL_MS (0..500, default 20) is the queued audio the output waits for after start or underrun,
+// never less than the device's own period plus one render block (SDL asks a whole period at once).
 #include <math.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -52,6 +53,8 @@ typedef struct Mixer {
     float voice_scratch[6][MAX_FRAME], filter_scratch[MAX_FRAME], output_scratch[MAX_FRAME * 6];
     double level_sum, level_peak; uint64_t level_count, level_frames; int first_sound_logged;
     int prefill;                                   // render blocks
+    int device_frames;                             // the device's period as SDL reports it (0: unknown)
+    uint64_t underruns_logged, blocks_since_log;   // underrun line without MKW_TRACE (render thread)
     uint64_t dry_runs, dry_blocks; int dry_voice, dry_voice_n, dry_count[256];   // voices run dry (level line)
     uint64_t pauses; int pause_voice;              // playing voices the game paused (level line)
 } Mixer;
@@ -100,8 +103,9 @@ static int prefill_blocks_for(const char *e) {
     return (int)ceil(ms / 5.0);
 }
 
-// Fills `frames` frames of m->ch channels from the ring (zeros for what is missing). Lock-free; SDL's audio thread.
-static void ring_pull(Mixer *m, float *out, uint32_t frames) {
+// Fills `frames` frames of m->ch channels from the ring (zeros for what is missing); `need` is SDL's whole request,
+// which a (re)start waits to have queued so it is not cut short by its own second chunk. Lock-free; SDL's audio thread.
+static void ring_pull(Mixer *m, float *out, uint32_t frames, uint32_t need) {
     atomic_fetch_add(&m->callback_frames, frames);
     unsigned epoch = atomic_load_explicit(&m->stop_epoch, memory_order_acquire);
     uint64_t rd = atomic_load(&m->rd), wr = atomic_load_explicit(&m->wr, memory_order_acquire), have = wr - rd;
@@ -123,6 +127,9 @@ static void ring_pull(Mixer *m, float *out, uint32_t frames) {
     }
     if (!m->ready) {
         uint64_t prefill = (uint64_t)m->frame * (uint64_t)m->prefill;
+        uint64_t period = (uint64_t)m->device_frames + (uint64_t)m->frame;   // one period plus a block of jitter
+        if (prefill < period) prefill = period;
+        if (prefill < need) prefill = need;
         if (prefill < frames) prefill = frames;
         if (prefill > RING_FRAMES) prefill = RING_FRAMES;
         if (have < prefill) {
@@ -154,11 +161,12 @@ static void SDLCALL sdl_pull(void *user, SDL_AudioStream *stream, int additional
     Mixer *m = user;
     float tmp[6 * 1024];
     const int bytes = m->ch * (int)sizeof(float);   // one frame
+    const uint32_t need = (uint32_t)(additional / bytes);
     while (additional > 0) {
         uint32_t frames = (uint32_t)(additional / bytes);
         if (!frames) break;
         if (frames > 1024) frames = 1024;
-        ring_pull(m, tmp, frames);
+        ring_pull(m, tmp, frames, need);
         if (!SDL_PutAudioStreamData(stream, tmp, (int)frames * bytes)) break;
         additional -= (int)frames * bytes;
     }
@@ -210,9 +218,30 @@ static void output_open(Mixer *m, int rate) {
         return;
     }
     m->device_ok = 1;
-    const char *name = SDL_GetAudioDeviceName(SDL_GetAudioStreamDevice(m->stream));
-    rt_log("audio: SDL device '%s' opened, %d Hz %s float, prefill %d ms", name ? name : "?", rate,
-           m->ch == 6 ? "5.1" : "stereo", m->prefill * 5);
+    SDL_AudioDeviceID dev = SDL_GetAudioStreamDevice(m->stream);
+    SDL_AudioSpec got = {0};
+    int period = 0;
+    if (!SDL_GetAudioDeviceFormat(dev, &got, &period) || period < 0) period = 0;
+    if (period > RING_FRAMES / 2) period = RING_FRAMES / 2;
+    m->device_frames = period;
+    const char *name = SDL_GetAudioDeviceName(dev);
+    int prefill_ms = m->prefill * 5, floor_ms = (period + m->frame) * 1000 / rate;
+    rt_log("audio: SDL device '%s' opened, %d Hz %s float, period %d frames (device %d Hz %d ch), prefill %d ms, "
+           "driver %s", name ? name : "?", rate, m->ch == 6 ? "5.1" : "stereo", period, got.freq, got.channels,
+           prefill_ms > floor_ms ? prefill_ms : floor_ms, SDL_GetCurrentAudioDriver() ? SDL_GetCurrentAudioDriver() : "?");
+}
+
+// One line per 5 s of output while the device runs out of audio, with or without MKW_TRACE: each underrun is a gap
+// the player hears (#544). Render thread only.
+static void underrun_note(Mixer *m) {
+    if (!m->device_ok || ++m->blocks_since_log < 1000) return;
+    m->blocks_since_log = 0;
+    uint64_t now = atomic_load(&m->underruns);
+    if (now == m->underruns_logged) return;
+    rt_log("audio: %llu underruns in the last 5 s (%llu total, %llu frames of silence), device period %d frames",
+           (unsigned long long)(now - m->underruns_logged), (unsigned long long)now,
+           (unsigned long long)atomic_load(&m->missing_frames), m->device_frames);
+    m->underruns_logged = now;
 }
 
 // Render thread only.
@@ -885,6 +914,7 @@ void audio_mixer_render(AudioRenderer *r, double seconds) {
     level_note(r, m, lr, frames * oc);
     raw_note(lr, frames * oc);
     output_push(m, lr, frames);
+    underrun_note(m);
 }
 
 // ---- the output device of IAudioDevice (audren_sf.c): one device, stereo or 5.1 (audio_output_channels)

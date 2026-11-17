@@ -73,7 +73,7 @@ import game_texts  # (build_all: the game's texts in ca, gl, eu)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gamecode import DamagedSource, compile_game
 from gamesource import check, is_nx, loose_romfs, unpack
-from gamecopy import clear_dir, copy_tree, remove_stale
+from gamecopy import BUILD_BYTES, check_space, clear_dir, copy_tree, remove_stale, romfs_bytes, tree_bytes
 from nup import Nup
 from machine import (
     ZIG_CACHE,
@@ -335,6 +335,14 @@ def main() -> None:
         })  # fmt: skip
         regenerate_if_cleaned(state, keys, work)
         redo_exefs_if_missing(state, game)
+        # The room the steps to come take: the RomFS copy less what a cut one left, and the game's build the first
+        # time (an update writes over its files instead of beside them)
+        need = 0
+        if "romfs" in STEPS and args.romfs == "copy" and state["done"].get("romfs") != keys["romfs"]:
+            need += max(romfs_bytes(romfs_src) - tree_bytes(romfs), 0)
+        if "compile" in STEPS and "compile" not in state["done"]:
+            need += BUILD_BYTES
+        check_space(game, need)
         for step in STEPS[1:]:
             # The start screen sets up again when its version differs (launcher.cpp): an update by hand (a new
             # AppImage or zip over the old) kept the old steps (#50: 0.1.8 played with 0.1.7's shaders). Kept once the
