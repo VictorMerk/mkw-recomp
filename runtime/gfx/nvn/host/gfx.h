@@ -80,6 +80,14 @@ typedef struct {
 } GfxShaderRes;
 typedef struct { uint8_t type, comps, packed; } GfxShaderIo;   // GFX_TYPE_*, components, 1 with a Component decoration
 int gfx_shader_stage(const GfxShader *s);                   // GFX_STAGE_VS, GFX_STAGE_FS or GFX_STAGE_CS
+// A compute program whose first invocation alone resets what the others append to (sm86 glsl/first_store.py): 0 none;
+// 1 split only for dispatches of y = z = 1 groups, 2 for z = 1 (vk_pipeline_compute_first, vk_exec_ops.c)
+int gfx_shader_first_store(const GfxShader *s);
+// Hints of the translator for the setup's prewarm (sm86/translate/glsl/int_hints.py, vk_pipe_pairs.c): the input
+// Locations a vertex shader uses only as integers, and the outputs of a fragment shader that only moves flat inputs'
+// bits (both bit masks, 0 none).
+uint32_t gfx_shader_int_inputs(const GfxShader *s);
+uint32_t gfx_shader_raw_outputs(const GfxShader *s);
 int gfx_shader_resources(const GfxShader *s, int kind, const GfxShaderRes **res);   // count of GFX_RES_* kind; array in *res
 int gfx_shader_spec(const GfxShader *s, const uint32_t **words);   // fixed-address constant words: bank << 16 | byte
 // s with word k fixed to val[k] where fix[k] (specialization constants' defaults); lives for the process; NULL if none

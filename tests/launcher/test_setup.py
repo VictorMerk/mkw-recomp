@@ -269,19 +269,19 @@ assert machine.package_dir(Path(sys.argv[2])) == Path(sys.argv[3])
 def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     game, runtime = tmp_path / ODD / "game", tmp_path / "launcher"
     calls = []
-    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
+    process = SimpleNamespace(returncode=0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
         return process
 
-    monkeypatch.setattr(prepare.subprocess, "Popen", start)
-    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
+    monkeypatch.setattr(prepare.subprocess, "run", start)
     prepare.warm(game, game / "setup-work", runtime)
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw"))]
+    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw")), "--prewarm"]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(game)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
+    assert kwargs["env"]["MKW_LOG_NAME"] == "warm"
+    assert kwargs["timeout"] == prepare.WARM_TIMEOUT and kwargs["check"] is False
 
 
 @pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
@@ -295,7 +295,7 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     alias.symlink_to(target, target_is_directory=True)
     runtime, source = tmp_path / "launcher", tmp_path / "dump"
     calls = []
-    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
+    process = SimpleNamespace(returncode=0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
@@ -306,8 +306,7 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr(prepare, "STEPS", ("check", "warm"))
     monkeypatch.setattr(prepare, "check", lambda *args: (source / "exefs", source / "romfs",
                                                        SimpleNamespace(name="test")))
-    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
-    monkeypatch.setattr(prepare.subprocess, "Popen", start)
+    monkeypatch.setattr(prepare.subprocess, "run", start)
     monkeypatch.setattr(sys, "argv", ["prepare.py", "--game", str(alias), "--runtime", str(runtime),
                                       "--source", str(source)])
     # main opens its setup log on stderr. Restore pytest's capture stream after exercising the real argument path
@@ -320,9 +319,9 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
         if sys.stderr is not original_stderr:
             sys.stderr.close()
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / "mkw")]
+    assert argv == [str(runtime / "mkw"), "--prewarm"]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(alias)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
+    assert kwargs["env"]["MKW_LOG_NAME"] == "warm"
 
 
 @pytest.mark.parametrize("driver", ["clang", "lld-link", "zig"])
