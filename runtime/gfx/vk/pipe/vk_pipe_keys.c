@@ -665,7 +665,7 @@ static int prewarm_mark(char *path, size_t cap) {
     return 1;
 }
 
-void vk_pipeline_prewarm(void) {
+static void prewarm_run(void) {
     const char *gpu = rt_config()->gpu;
     if (!A.on || (gpu && !strcmp(gpu, "null"))) return;
     if (!cfg_bool("MKW_PIPE_PREBUILD")) {   // prebuild_start logs the off case
@@ -791,6 +791,11 @@ void vk_pipeline_prewarm(void) {
     K.file = NULL;
     plat_mutex_unlock(&P.lock);
     plat_file_delete(mark);   // the boot got through: a stall above left the rest to the background, not a crash
+}
+
+void vk_pipeline_prewarm(void) {
+    prewarm_run();
+    pairs_release();   // after the records too: their shaders, drawn in earlier runs, stay
 }
 
 // ensure_init's hook: without a prewarm (MKW_PIPE_PREBUILD=0, or the device came up first elsewhere) the records

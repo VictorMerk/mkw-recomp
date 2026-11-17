@@ -66,6 +66,15 @@ def translator_hash(spec: Path = SPEC) -> str:
     return h.hexdigest()
 
 
+def put(path: Path, data: str | bytes) -> None:
+    """The file written beside and renamed over: a setup stopped halfway leaves no half-written output, and an output
+    folder seeded with hard links to an older one (an update prepared beside the version still played) never writes
+    through to the older file."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(data) if isinstance(data, bytes) else tmp.write_text(data)
+    os.replace(tmp, path)
+
+
 def work(job: tuple[str, str, str, str, bool, str]) -> tuple[str, str]:
     """(sha1, 'ok' or the reason it failed)."""
     sha, stage, shaders, out, full, th = job
@@ -85,7 +94,7 @@ def work(job: tuple[str, str, str, str, bool, str]) -> tuple[str, str]:
     why, glsl_sum = translate_one(
         sha, stage, code, key, out, full, ctl, c1.read_bytes() if c1.exists() else b"", prev_sum
     )
-    done.write_text(f"{th}\n{why}\n{glsl_sum}")
+    put(done, f"{th}\n{why}\n{glsl_sum}")
     return sha, why
 
 
@@ -106,22 +115,22 @@ def translate_one(
     if cs_src is not None:   # task/mesh as compute, for devices without mesh shaders
         cs_gl, cs_spv = Path(out, f"{key}.cs.glsl"), Path(out, f"{key}.cs.spv")
         if full or not cs_spv.exists() or not cs_gl.exists() or cs_gl.read_text() != cs_src:
-            cs_gl.write_text(cs_src)
+            put(cs_gl, cs_src)
             cs_why = compile_check(cs_gl, cs_spv, "cs")
             if cs_why != "ok":
                 cs_spv.unlink(missing_ok=True)
-                Path(out, f"{key}.cs.result").write_text(cs_why)
+                put(Path(out, f"{key}.cs.result"), cs_why)
     # The reflection first: a change that touches only it (the written flag of storage buffers, 01/11/2026) leaves the
     # GLSL as it was, and the shortcut below kept the old file.
-    Path(out, f"{key}.res.json").write_text(json.dumps(refl, indent=1))
+    put(Path(out, f"{key}.res.json"), json.dumps(refl, indent=1))
     glsl_sum = hashlib.sha256(src.encode()).hexdigest()
     same = prev_sum == glsl_sum or (gl.exists() and gl.read_text() == src)
     if not full and res.exists() and spv.exists() and same:
         return res.read_text(), glsl_sum  # same GLSL as the last pass: same SPIR-V and verdict
     res.unlink(missing_ok=True)  # until this pass has a verdict
-    gl.write_text(src)
+    put(gl, src)
     why = compile_check(gl, spv, refl["stage"])
-    res.write_text(why)
+    put(res, why)
     return why, glsl_sum
 
 
@@ -130,11 +139,15 @@ def compile_check(gl: Path, spv: Path, stage: str) -> str:
     if _shaderc:
         code, err = _shaderc.compile(gl.read_text(), stage, str(gl))
         if code:
-            spv.write_bytes(code)
+            put(spv, code)
     else:
+        tmp = spv.with_name(spv.name + ".tmp")
         r = subprocess.run([GLSLC, "--target-env=vulkan1.3", f"-fshader-stage={GLSLC_STAGE[stage]}", "-O", str(gl),
-                            "-o", str(spv)], capture_output=True, text=True, check=False)  # fmt: skip
+                            "-o", str(tmp)], capture_output=True, text=True, check=False)  # fmt: skip
         err = r.stderr if r.returncode else ""
+        if not err:
+            os.replace(tmp, spv)
+        tmp.unlink(missing_ok=True)
     if err:
         first = next((ln for ln in err.splitlines() if "error" in ln), err.strip()[:120])
         return f"glslc: {first.split(': ', 2)[-1][:100]}"
@@ -153,9 +166,9 @@ def write_mesh_cs_vs(out: Path) -> None:
     gl, spv = Path(out, f"{MESH_CS_VS_KEY}.glsl"), Path(out, f"{MESH_CS_VS_KEY}.spv")
     if spv.exists() and gl.exists() and gl.read_text() == MESH_CS_VS:
         return
-    gl.write_text(MESH_CS_VS)
+    put(gl, MESH_CS_VS)
     refl = {"stage": "vs", "cbufs": [], "sbufs": [], "textures": [], "images": [], "spec": []}
-    Path(out, f"{MESH_CS_VS_KEY}.res.json").write_text(json.dumps(refl, indent=1))
+    put(Path(out, f"{MESH_CS_VS_KEY}.res.json"), json.dumps(refl, indent=1))
     why = compile_check(gl, spv, "vs")
     if why != "ok":
         raise SystemExit(f"mesh-as-compute vertex shader: {why}")

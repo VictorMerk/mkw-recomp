@@ -9,19 +9,29 @@ Every vertex or fragment stage in no pair goes in alone, its partner all zero: a
 with a fragment stage only, drawn with another program's vertex stage (a replay of build/cap/race, 17/11/2026: 7 of
 its 9 fragment libraries not built were such), and a fragment library does not depend on the vertex stage.
 
+A record's fragment stage from exefs/main or a Layout archive (nn::ui2d's shaders) is marked as one the game may draw
+with NVN's alpha test, and the prewarm also builds its fragment library with the test's functions the game uses: in
+6 165 recorded pipelines (17/11/2026) the test was on in 32, all with GREATER or GEQUAL and all with one of 4 fragment
+programs, three of exefs/main and one of a Layout archive (91 fragment programs in those sources).
+
 Usage: python tools/shaders/pipeline_pairs.py [--shaders build/shaders] [--out build/pipeline-pairs.bin]
-Layout: "MKW_PAIR", u32 version 1, u32 record count, then per record the vertex and the fragment program key (32 bytes
-each; all zero: none).
+Layout: "MKW_PAIR", u32 version 2, u32 record count, then per record the vertex and the fragment program key (32 bytes
+each; all zero: none) and u32 flags (bit 0: the fragment stage may draw with the alpha test).
 """
 
 import argparse
 import csv
 import hashlib
+import re
 import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MAGIC, VERSION = b"MKW_PAIR", 1
+MAGIC, VERSION = b"MKW_PAIR", 2
+FLAG_ALPHA = 1
+# extract.py's source column: "<romfs>::Layout/..." from a .nup, "<romfs>/Layout/..." from a folder ("\" on Windows),
+# "<exefs>/main@0x..." for exefs/main
+ALPHA_SOURCE = re.compile(r"(^|[/\\:])Layout[/\\]|(^|[/\\])main@0x")
 
 
 def program_key(shaders: Path, sha1: str) -> bytes:
@@ -33,11 +43,13 @@ def write(shaders: Path, out: Path) -> int:
     with (shaders / "pairs.csv").open() as f:
         rows = [(r["vs"], r["ps"]) for r in csv.DictReader(f)]
     with (shaders / "index.csv").open() as f:
-        stages = [(r["sha1"], r["stage"]) for r in csv.DictReader(f) if r["stage"] in ("vs", "ps")]
+        index = [r for r in csv.DictReader(f) if r["stage"] in ("vs", "ps")]
+    stages = [(r["sha1"], r["stage"]) for r in index]
+    alpha = {r["sha1"] for r in index if r["stage"] == "ps" and ALPHA_SOURCE.search(r["source"])}
     paired = {s for r in rows for s in r}
     rows += [(s, "") if st == "vs" else ("", s) for s, st in stages if s not in paired]
     keys = {s: program_key(shaders, s) for r in rows for s in r if s} | {"": bytes(32)}
-    body = b"".join(keys[v] + keys[f] for v, f in rows)
+    body = b"".join(keys[v] + keys[f] + struct.pack("<I", FLAG_ALPHA if f in alpha else 0) for v, f in rows)
     tmp = out.with_suffix(".tmp")
     tmp.write_bytes(MAGIC + struct.pack("<II", VERSION, len(rows)) + body)
     tmp.replace(out)
