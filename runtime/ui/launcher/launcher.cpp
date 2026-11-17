@@ -1067,6 +1067,12 @@ static void page_files(float w, float h) {
     if (ready) files_summary(st, act_h);
     if (!L.tools) {
         ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_NO_TOOLS));
+        if (!ready) {   // a runtime-only package can still open an installation prepared elsewhere
+            ImGui::Dummy(ImVec2(0, 8 * L.scale));
+            game_dir_button(st, act_h);
+            game_dir_notes();
+            ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_GAME_DIR_HELP));
+        }
     } else if (ready) {
         ImGui::Dummy(ImVec2(0, 8 * L.scale));
         if (st.running || st.finished) ImGui::SetNextItemOpen(true, ImGuiCond_Always);   // its steps stay in view
