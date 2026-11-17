@@ -129,7 +129,7 @@ static VkPipeline lib_create(int kind, const VkPipeState *s, const GKey *k, VkPi
                 if ((d = spirv_dual_source(fcode, fw, &n2))) fcode = d, fw = n2;
                 else LOG_ONCE("vk_pipeline: SRC1 blend factors but the fragment shader writes no colour output 1");
             }
-            uint32_t *at = k->alpha_func && fcode ? spirv_alpha_test(fcode, fw, k->alpha_func - 1, k->alpha_ref, &n2) : NULL;
+            uint32_t *at = k->alpha_func && fcode ? spirv_alpha_test(fcode, fw, k->alpha_func - 1, &n2) : NULL;
             if (at) fcode = at, fw = n2;
             patched = fcode ? spirv_set(fcode, fw, 1) : NULL;
             free(d), free(at);
@@ -312,7 +312,7 @@ void lib_keys(const VkPipeState *s, const GKey *k, ViKey *v, PrKey *pk, FsKey *f
         if (pk->missing >> i & 1) pk->fin[i] = fin[i];
     memset(fk, 0, sizeof *fk);
     fk->kind = LIB_FS, fk->fs = s->fs, fk->dsb = k->dsb, fk->samples = k->samples, fk->a2c = k->a2c;
-    fk->alpha_func = k->alpha_func, fk->alpha_ref = k->alpha_ref;
+    fk->alpha_func = k->alpha_func;
     memset(ok, 0, sizeof *ok);
     ok->kind = LIB_FO, ok->n_color = k->n_color, ok->samples = k->samples, ok->a2c = k->a2c, ok->logic_op = k->logic_op;
     ok->blend_en = k->blend_en, ok->depth = k->depth, ok->stencil = k->stencil, ok->wmask = k->wmask;

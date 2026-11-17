@@ -458,4 +458,6 @@ void plat_mem_info(float *used_mb, float *total_mb, float *proc_mb);
 // This process's memory in bytes: resident (the working set) and private (Windows: committed private bytes; Linux: the
 // resident anonymous pages). 0 when unknown.
 void plat_process_memory(uint64_t *resident, uint64_t *private_bytes);
+// Hands the C heap's free pages back to the system after a large release of small blocks.
+void plat_heap_trim(void);
 

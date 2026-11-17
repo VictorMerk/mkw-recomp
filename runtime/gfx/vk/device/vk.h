@@ -632,8 +632,8 @@ typedef struct VkPipeState {
                                            // (OP_PRIM_RESTART, set by op_draw_idx); dynamic state only
     uint8_t feedback;                      // the fragment shader samples an attachment of the pass in the feedback
                                            // layout: 1 colour, 2 depth/stencil (VK_PIPELINE_CREATE_*_FEEDBACK_LOOP_BIT_EXT)
-    float alpha_ref;                       // OP_ALPHA_REF; 0 unless color.alpha_func tests (the draw clears it). It
-                                           // fills padding: KeyRec (pipeline-keys.bin) keeps its size
+    float pad_ref;                         // 0. The alpha test's reference was here until 17/11/2026; it now goes in
+                                           // the support buffer (support_in), not the pipeline. KeyRec keeps its size
     blend_st blend[8];                    // OP_BIND_STATE kind 0, indexed by blend_st.target
     color_st color;                        // kinds 1-5
     chmask_st chmask;
@@ -645,7 +645,7 @@ typedef struct VkPipeState {
     const GfxShader *mesh;                 // a task/mesh draw whose vs is the task program: its mesh program; NULL
                                            // otherwise (a mesh program alone sits in vs)
 } VkPipeState;
-_Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "alpha_ref must stay in the padding (KeyRec size)");
+_Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "pad_ref must stay in the padding (KeyRec size)");
 void vk_pipe_state_defaults(VkPipeState *s);   // NVN defaults of every state object (shaders and formats left 0)
 enum { VK_PIPE_SUPPORT = GFX_RES_KINDS };      // VkPipeBinding.kind of the support buffer
 #define VK_PIPE_STAGE_NVN 0x80                 // VkPipeBinding.stage of a task or mesh binding: this | its NVN stage (6, 7)
