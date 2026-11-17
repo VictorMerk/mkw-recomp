@@ -5,6 +5,7 @@ end's regression test runs over captures instead (`tools/test/`).
 
 | File | What it checks |
 |---|---|
+| `test_memwatch.py` | Native Windows process-memory collection: observes an allocated 64 MiB increase, preserves existing logs, leaves the target running, and exits when the target exits; no game needed, skipped on other hosts |
 | `test_gamelib_id.py` | Canonical and legacy CRLF header hashes, invalidation after header/flag changes, and the actual library guard's ABI, table-bound and sidecar checks with synthetic data |
 | `test_lan_peers.py` | Actual LAN socket overrides with owned UDP sockets: opt-in, peer filtering and refresh, loopback binding, broadcast fanout, direct-send isolation, public-address rejection and timestamped diagnostics without payloads; Linux and Windows (Microsoft CRT or MinGW) |
 | `test_warp32.py` | Executes the translator's actual shuffle/ballot helpers and emitted signed/unsigned reductions as C++ on synthetic 32/64/128-lane subgroups, with distinct values per logical warp and partially active masks |

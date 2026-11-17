@@ -15,6 +15,8 @@
 // swizzle. Copies and texture clears are logged as "copy/clear after pass N". MKW_DUMP_LOG=<from> also logs the
 // frames from..frame-1 to passes.txt, with PNGs only of targets up to 64K texels. MKW_DUMP_BUF=<addr>:<size>[:...]
 // snapshots one GPU buffer range after every logged pass (buf_<pass>.bin and bufs.txt, see buf_snap).
+// MKW_DUMP_ENTRIES=<1..4096>: distinct pipeline + texture sets listed per pass (default 48). Dense passes can hide
+// the faulty draw among the overflow summary: a captured 951-draw pass left 733 draws without their bindings.
 // PNGs are opaque (alpha dropped). Integer formats are scaled by the image maximum, depth by its min..max range, SNORM
 // as x/2+1/2, UNORM and sRGB bytes written as stored. Caps: MAX_PASSES passes copied, PNG_CAP bytes of PNGs.
 // MKW_DUMP_TEX=<id>|<w>x<h>[,...]: those texture slots, or 2D textures of that size, are copied where first sampled,
@@ -68,7 +70,7 @@ void vk_dump_shutdown(void) {
     dvma_ = NULL;
     dvma_once = (PlatOnce)PLAT_ONCE_INIT;
 }
-#define MAX_ENTS 48                 // distinct pipeline + texture sets listed per pass
+#define MAX_ENTS 4096               // upper bound; only the requested entries are touched
 #define MAX_LUTS 256                // 3D textures and small sampled 8-bit 2D textures dumped per frame
 #define TEX2D_CAP (1u << 20)        // texels of a sampled 2D texture that is dumped
 
@@ -80,6 +82,7 @@ FILE *images_f;
 FILE *passes_f;
 static int seq, finished, copied;      // copied: passes and dispatches of the dump frame whose images were copied
 static int skip_runs, dump_ubo;        // MKW_DUMP_SKIP_RUNS, MKW_DUMP_UBO
+static int max_ents = 48;              // MKW_DUMP_ENTRIES: distinct pipeline + texture sets listed per pass
 static int luts_only;                  // MKW_CTL "dump DIR lut": only the 3D volumes and small textures, no targets
 static uint32_t want_tex[16][2];       // MKW_DUMP_TEX: slot id and 0, or width and height
 static int nwant_tex;
@@ -155,7 +158,7 @@ uint64_t shader_hash(const GfxShader *s) {
 typedef struct { VkPipeline p; uint64_t th; int draws; char *text; } Ent;
 static Ent ents[MAX_ENTS];
 static int nents, ents_over, pass_draws;
-static struct { uint64_t fs; int draws; } over_fs[64];   // fragment shaders of the draws past MAX_ENTS
+static struct { uint64_t fs; int draws; } over_fs[64];   // fragment shaders of the draws past max_ents
 static int n_over_fs;
 typedef struct { VkImage image; VkFormat format; uint32_t w, h, d; int id, is2d; } Lut;
 static Lut luts[MAX_LUTS];          // queued for the next pass end or dispatch
@@ -390,7 +393,7 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
             ents[i].draws++;
             goto out;
         }
-    if (nents == MAX_ENTS) {
+    if (nents == max_ents) {
         ents_over++;
         uint64_t fh = shader_hash(s->fs);
         int k = 0;
@@ -403,11 +406,12 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
     }
     Str b = {0};
     sp(&b, "vs %016llx fs %016llx prog %llu prim %d; depth test %d write %d func %d; wmask t0 %#x t1 %#x; blend0 %llx "
-           "fs outputs %#x; discard %d vp %.0f,%.0f %.0fx%.0f z %.2f-%.2f range %.2f-%.2f scissor %d,%d %dx%d (set %d) samples %u\n",
+           "blend-enable %#x fs outputs %#x; discard %d vp %.0f,%.0f %.0fx%.0f z %.2f-%.2f range %.2f-%.2f scissor %d,%d %dx%d (set %d) samples %u\n",
        (unsigned long long)shader_hash(s->vs),
        (unsigned long long)shader_hash(s->fs), (unsigned long long)(ex->prog ? ex->prog->serial : 0), s->prim,
        (int)s->ds.dt, (int)s->ds.dw, (int)s->ds.df, vk_pipeline_target_wmask(s, 0), vk_pipeline_target_wmask(s, 1),
-       (unsigned long long)*(const uint64_t *)&s->blend[0], s->fs ? gfx_shader_outputs(s->fs, NULL) : 0,
+       (unsigned long long)*(const uint64_t *)&s->blend[0], (unsigned)s->color.blend_en,
+       s->fs ? gfx_shader_outputs(s->fs, NULL) : 0,
        (int)s->raster_discard, ex->vp[0][0], ex->vp[0][1], ex->vp[0][2], ex->vp[0][3], ex->vp[0][4], ex->vp[0][5],
        ex->depth_range[0], ex->depth_range[1], ex->scissor.x, ex->scissor.y, ex->scissor.w, ex->scissor.h,
        ex->has_scissor, ex->pass_samples);
@@ -726,6 +730,14 @@ int vk_dump_rearm(const char *d, int ubo, int luts, int log_n) {
 }
 
 void vk_dump_init(void) {
+    const char *entries = cfg_get("MKW_DUMP_ENTRIES");
+    if (entries && *entries) {
+        char *end;
+        unsigned long n = strtoul(entries, &end, 10);
+        if (!*end && n >= 1 && n <= MAX_ENTS) max_ents = (int)n;
+        else rt_log("vk_dump: invalid MKW_DUMP_ENTRIES '%s'; using %d (range 1..%d)", entries, max_ents, MAX_ENTS);
+        rt_log("vk_dump: listing up to %d pipeline/texture sets per pass", max_ents);
+    }
     const char *tu = cfg_get("MKW_TRACE_UBO");
     if (tu && sscanf(tu, "%llx:%u", (unsigned long long *)&tu_fs, &tu_rows) >= 1) {
         const char *o = cfg_get("MKW_TRACE_UBO_OUT");

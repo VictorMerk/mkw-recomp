@@ -5,10 +5,13 @@ Back end diagnostics and measurements: frame dump, GPU time per pass and the sub
 At shutdown the completion callbacks drain first, the rtstats workers finish their queued scans and join, and the
 shared readback allocator is destroyed before the Vulkan device. Diagnostic buffers never outlive their allocator.
 
+Draw descriptions include the colour blend-enable mask alongside the blend factors: configured factors alone do not
+tell whether a copy draw reads the destination attachment.
+
 | File | What it is |
 |---|---|
 | `vk_timeline.c` | `MKW_TRACE_TL=1` (measurement): each frame's submits on a single clock (game, replay, calibrated GPU, fence, waits), one line every 600 frames |
-| `vk_dump.c`, `vk_dump_internal.h` | `MKW_DUMP=<frame>`: dumps a frame to PNG (RenderDoc does not capture this back end): passes, draws and dispatches; the header is what the parts share |
+| `vk_dump.c`, `vk_dump_internal.h` | `MKW_DUMP=<frame>`: dumps a frame to PNG (RenderDoc does not capture this back end): passes, draws and dispatches; `MKW_DUMP_ENTRIES=1..4096` raises or lowers the per-pass limit of 48 distinct pipeline/texture sets, including for control-pipe dumps; the header is what the parts share |
 | `vk_dump_img.c` | Part of the dump: formats, copy of each image to a buffer and its PNGs |
 | `vk_dump_buf.c` | Part of the dump: `MKW_DUMP_BUF`, a buffer range after each pass |
 | `vk_dump_draws.c` | Part of the dump: `MKW_DUMP_DRAWS=<from>-<to>` (or an fs hash) copies the first colour target after every draw of passes in the range, splitting and resuming rendering for valid snapshots; `MKW_DUMP_DRAWS_RECT=x,y,w,h` only a rectangle of it; `MKW_DUMP_DRAWS_SKIP=N` leaves the first N draws out (a pass of more than 256 draws in parts); each snapshot line names its vs and fs |

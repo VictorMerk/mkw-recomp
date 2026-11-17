@@ -119,8 +119,11 @@ int cap_replay_main(int argc, char **argv) {
     const RtGuestLayout *L = mem_layout();
     if (m.magic != CAP_MAGIC || m.version != CAP_VERSION) rt_fatal("cap: %s is not a version %u capture", path, CAP_VERSION);
     if (m.heap_base != L->heap.base || m.alias_base != L->alias.base || m.stack_base != L->stack.base)
-        rt_fatal("cap: guest layout differs from the capture's (heap %#llx here, %#llx there)",
-                 (unsigned long long)L->heap.base, (unsigned long long)m.heap_base);
+        rt_fatal("cap: guest layout differs from the capture's (heap %#llx here / %#llx captured, "
+                 "alias %#llx / %#llx, stack %#llx / %#llx)",
+                 (unsigned long long)L->heap.base, (unsigned long long)m.heap_base,
+                 (unsigned long long)L->alias.base, (unsigned long long)m.alias_base,
+                 (unsigned long long)L->stack.base, (unsigned long long)m.stack_base);
     // DeviceSetDepthMode runs once at the boot: without it a z = -w full-screen quad (the final upscale) is clipped
     // and the frame is black (the title and race captures, 07/11/2026).
     nvn_depth_minus_w_set((int)m.depth_minus_w);
