@@ -127,14 +127,26 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
 
 def compile_one(cc: list[str], flags: list[str], src: Path, out: Path, stamp: Path, key: str) -> str:
     """One object: "" when built, else the error for the player; a damaged source raises DamagedSource instead."""
-    r = subprocess.run([*cc, "-std=gnu11", *flags, "-c", str(src), "-o", str(out)], capture_output=True, **UTF8,
-                       check=False)  # fmt: skip
+    cmd = [*cc, "-std=gnu11", *flags, "-c", str(src), "-o", str(out)]
+    r = subprocess.run(cmd, capture_output=True, **UTF8, check=False)
+    if r.returncode and crashed(r.stderr):
+        # A compiler crash (ICE) on a chunk that compiles everywhere else is the machine, not the source (#506: a
+        # different chunk each time, only with parallel jobs, on an i7-13700KF): one more try, and its first lines
+        # (the crash's signature, which the tail cut) kept in setup.log.
+        print(f"compile: {src.name}: the compiler crashed, trying again:\n{r.stderr.strip()[:1500]}", file=sys.stderr)
+        r = subprocess.run(cmd, capture_output=True, **UTF8, check=False)
     if r.returncode:
         if damaged(src):
             raise DamagedSource(f"compiling the game code failed: {src.name} has NUL bytes (a damaged write)")
+        print(f"compile: {src.name} failed:\n{r.stderr.strip()[:3000]}", file=sys.stderr)
         return f"{src.name}: {r.stderr.strip()[-300:]}"
     stamp.write_text(key)
     return ""
+
+
+def crashed(stderr: str) -> bool:
+    """clang's crash report, as opposed to an error in the source."""
+    return "PLEASE submit a bug report" in stderr or "FILES TO THE BUG REPORT" in stderr
 
 
 def chunk_base(cc: list[str], base_cpu: str, gen_headers: list[Path], src: Path) -> str:
